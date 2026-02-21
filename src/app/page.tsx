@@ -111,7 +111,7 @@ export default function Home() {
     addEvent,
     updateEvent,
     deleteEvent,
-    deleteNote,
+    updateNote,
     loadFromSupabase,
     loaded,
   } = useStore();
@@ -202,13 +202,13 @@ export default function Home() {
 
   const handlePendingDropSave = useCallback(
     (data: Omit<CalendarEvent, 'id'>) => {
-      addEvent(data);
-      if (pendingDrop && !pendingDrop.note.keepInScratch) {
-        deleteNote(pendingDrop.note.id);
+      addEvent({ ...data, fromNoteId: pendingDrop?.note.id });
+      if (pendingDrop) {
+        updateNote(pendingDrop.note.id, { status: 'used' });
       }
       setPendingDrop(null);
     },
-    [addEvent, deleteNote, pendingDrop]
+    [addEvent, updateNote, pendingDrop]
   );
 
   const handleDayClick = useCallback((date: string) => {
