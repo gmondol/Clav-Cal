@@ -1,9 +1,88 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { usePathname } from 'next/navigation';
+import {
+  DndContext,
+  DragEndEvent,
+  closestCenter,
+  useDraggable,
+  useDroppable,
+  MouseSensor,
+  TouchSensor,
+  useSensor,
+  useSensors,
+} from '@dnd-kit/core';
 import { useStore } from '@/store/useStore';
-import { ScratchNote, NoteStatus, NOTE_STATUSES, PRESET_TAGS, TAG_DEFAULT_COLORS } from '@/lib/types';
+
+const NAV_ITEMS = [
+  { href: '/', accent: 'Clav', rest: 'StreamSchedule' },
+  { href: '/content', accent: 'Content', rest: 'Workshop' },
+] as const;
+import { ScratchNote, NoteStatus, NOTE_STATUSES, PRESET_TAGS, TAG_DEFAULT_COLORS, CollabProfile } from '@/lib/types';
 import TagBadge from '@/components/ui/TagBadge';
+import ColorPicker from '@/components/ui/ColorPicker';
+import { supabase } from '@/lib/supabase';
+
+interface ChatMessage {
+  role: 'user' | 'assistant';
+  content: string;
+}
+
+function ContentColumn({
+  status,
+  colNotes,
+  onAddNew,
+  onEditNote,
+  onMoveNote,
+  onDeleteNote,
+}: {
+  status: NoteStatus;
+  colNotes: ScratchNote[];
+  onAddNew: (status: NoteStatus) => void;
+  onEditNote: (note: ScratchNote) => void;
+  onMoveNote: (noteId: string, status: NoteStatus) => void;
+  onDeleteNote: (noteId: string) => void;
+}) {
+  const { setNodeRef, isOver } = useDroppable({
+    id: `content-col-${status}`,
+    data: { type: 'content-column', status },
+  });
+
+  return (
+    <div className="flex-1 flex flex-col min-w-0">
+      <div className="flex items-center gap-2 mb-3 px-1">
+        <span className="text-base">{NOTE_STATUSES.find((s) => s.value === status)?.emoji}</span>
+        <h2 className="text-sm font-bold text-foreground">{NOTE_STATUSES.find((s) => s.value === status)?.label}</h2>
+        <span className="text-[10px] font-semibold text-muted neu-inset rounded-full px-1.5 py-0.5">
+          {colNotes.length}
+        </span>
+      </div>
+      <div
+        ref={setNodeRef}
+        className={`flex-1 overflow-y-auto space-y-2.5 bg-white border border-border-light rounded-xl p-3 transition-colors ${isOver ? 'ring-2 ring-blue-300 ring-offset-1 bg-blue-50/30' : ''}`}
+      >
+        {status !== 'ready' && (
+          <button
+            onClick={() => onAddNew(status)}
+            className="w-full p-4 min-h-[7rem] flex items-center justify-center text-[11px] font-semibold text-blue-500 hover:text-blue-600 bg-white border border-dashed border-blue-400 hover:border-blue-500 hover:bg-blue-50 rounded-lg transition-all"
+          >
+            {status === 'workshop' ? '+ Add collab' : '+ Add new content idea'}
+          </button>
+        )}
+        {colNotes.map((note) => (
+          <ContentCard
+            key={note.id}
+            note={note}
+            onEdit={() => onEditNote(note)}
+            onMove={(s) => onMoveNote(note.id, s)}
+            onDelete={() => onDeleteNote(note.id)}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
 
 function ContentCard({
   note,
@@ -17,21 +96,45 @@ function ContentCard({
   onDelete: () => void;
 }) {
   const [showMove, setShowMove] = useState(false);
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
+    id: note.id,
+    data: { type: 'content-note', note },
+  });
 
   return (
     <div
-      className="rounded-lg p-3 transition-all hover:shadow-md cursor-pointer group"
+      ref={setNodeRef}
+      {...attributes}
+      {...listeners}
+      className={`bg-white border border-border-light rounded-lg p-4 min-h-[7rem] cursor-grab active:cursor-grabbing group hover:shadow-sm transition-shadow ${isDragging ? 'opacity-50' : ''}`}
       style={{
-        backgroundColor: note.color + '18',
         borderLeft: `3px solid ${note.color}`,
       }}
-      onClick={onEdit}
+      onClick={(e) => {
+        e.stopPropagation();
+        onEdit();
+      }}
     >
       <div className="flex items-start justify-between gap-2 mb-1.5">
-        <h4 className="text-sm font-semibold leading-tight" style={{ color: note.color }}>
-          {note.title}
-        </h4>
-        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center gap-2 min-w-0 flex-1">
+          {note.collabProfiles && note.collabProfiles.length > 0 && (
+            <div className="flex -space-x-2 flex-shrink-0">
+              {note.collabProfiles.slice(0, 3).map((p, i) => (
+                <div key={i} className="w-6 h-6 rounded-full overflow-hidden bg-zinc-200 border-2 border-white flex items-center justify-center">
+                  {p.profilePicUrl ? (
+                    <img src={p.profilePicUrl} alt="" className="w-full h-full object-cover" />
+                  ) : (
+                    <span className="text-[10px] text-zinc-400">👤</span>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+          <h4 className="text-sm font-semibold leading-tight truncate" style={{ color: note.color }}>
+            {note.title}
+          </h4>
+        </div>
+        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" onClick={(e) => e.stopPropagation()} onPointerDown={(e) => e.stopPropagation()}>
           <div className="relative">
             <button
               onClick={() => setShowMove(!showMove)}
@@ -67,8 +170,23 @@ function ContentCard({
           </button>
         </div>
       </div>
-      {note.description && (
-        <p className="text-[11px] text-zinc-500 mb-2 line-clamp-3">{note.description}</p>
+      {(note.description || (note.collabProfiles && note.collabProfiles.some((p) => p.igUrl || p.twitterUrl || p.tiktokUrl))) && (
+        <div className="text-[11px] text-zinc-500 mb-2 space-y-1">
+          {note.description && <p className="line-clamp-2">{note.description}</p>}
+          {note.collabProfiles && (() => {
+            const hasIg = note.collabProfiles.some((p) => p.igUrl);
+            const hasX = note.collabProfiles.some((p) => p.twitterUrl);
+            const hasTt = note.collabProfiles.some((p) => p.tiktokUrl);
+            if (!hasIg && !hasX && !hasTt) return null;
+            return (
+              <div className="flex gap-1.5 flex-wrap">
+                {hasIg && <span className="text-[9px] px-1.5 py-0.5 rounded bg-pink-100 text-pink-600">IG</span>}
+                {hasX && <span className="text-[9px] px-1.5 py-0.5 rounded bg-zinc-200 text-zinc-600">X</span>}
+                {hasTt && <span className="text-[9px] px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-100">TT</span>}
+              </div>
+            );
+          })()}
+        </div>
       )}
       <div className="flex items-center gap-1 flex-wrap">
         {note.tags.map((tag) => (
@@ -83,114 +201,531 @@ function NoteEditor({
   note,
   onSave,
   onCancel,
+  onDelete,
 }: {
   note?: ScratchNote;
   onSave: (data: Partial<ScratchNote> & { title: string; color: string }) => void;
   onCancel: () => void;
+  onDelete?: () => void;
 }) {
   const [title, setTitle] = useState(note?.title ?? '');
   const [description, setDescription] = useState(note?.description ?? '');
-  const [color, setColor] = useState(note?.color ?? '#3b82f6');
+  const [color, setColor] = useState(note?.color ?? '#000000');
   const [tags, setTags] = useState<string[]>(note?.tags ?? []);
-  const [status, setStatus] = useState<NoteStatus>(note?.status ?? 'idea');
+  const [showTagPicker, setShowTagPicker] = useState(false);
+  const [address, setAddress] = useState(note?.address ?? '');
+  const [attachments, setAttachments] = useState<string[]>(note?.attachments ?? []);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const status = note?.status ?? 'idea';
+  const isApproved = status === 'ready';
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    setUploading(true);
+    const newUrls: string[] = [];
+    for (const file of Array.from(files)) {
+      const ext = file.name.split('.').pop();
+      const path = `note-attachments/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+      const { error } = await supabase.storage.from('attachments').upload(path, file);
+      if (!error) {
+        const { data } = supabase.storage.from('attachments').getPublicUrl(path);
+        newUrls.push(data.publicUrl);
+      }
+    }
+    setAttachments((prev) => [...prev, ...newUrls]);
+    setUploading(false);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const removeAttachment = (url: string) => {
+    setAttachments((prev) => prev.filter((a) => a !== url));
+  };
 
   const toggleTag = (tag: string) => {
-    setTags((prev) => prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]);
-    if (!tags.includes(tag) && TAG_DEFAULT_COLORS[tag]) {
+    const wasActive = tags.includes(tag);
+    setTags((prev) => (wasActive ? prev.filter((t) => t !== tag) : [...prev, tag]));
+    if (!wasActive && TAG_DEFAULT_COLORS[tag]) {
       setColor(TAG_DEFAULT_COLORS[tag]);
     }
   };
 
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!title.trim()) return;
+    onSave({
+      title: title.trim(),
+      description: description.trim() || undefined,
+      color,
+      tags,
+      status,
+      archived: false,
+      address: address.trim() || undefined,
+      attachments,
+    });
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm animate-fade-in" onClick={onCancel}>
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg p-6 space-y-4 animate-scale-in" onClick={(e) => e.stopPropagation()}>
-        <h3 className="text-lg font-bold text-foreground">{note ? 'Edit Idea' : 'New Idea'}</h3>
-
+      <form
+        onSubmit={handleSubmit}
+        className="bg-white rounded-xl border border-border p-4 space-y-3 animate-scale-in shadow-lg max-h-[80vh] overflow-y-auto max-w-lg w-full"
+        onClick={(e) => e.stopPropagation()}
+      >
         <input
           autoFocus
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           placeholder="What's the idea?"
-          className="w-full text-sm font-semibold bg-transparent border-b border-border-light pb-2 outline-none placeholder:text-zinc-300 focus:border-primary/30 transition-colors"
+          className="w-full text-sm font-semibold bg-transparent border-b border-border-light pb-1 outline-none placeholder:text-zinc-300 focus:border-primary/30 transition-colors"
         />
 
         <textarea
           value={description}
           onChange={(e) => setDescription(e.target.value)}
-          placeholder="Flesh it out... notes, format ideas, guest list, equipment needed, talking points..."
-          rows={5}
-          className="w-full text-sm bg-zinc-50 rounded-lg border border-border-light p-3 outline-none resize-none placeholder:text-zinc-300 focus:border-primary/30"
+          placeholder="📝 Flesh it out... notes, format ideas, guest list, equipment needed, talking points..."
+          rows={3}
+          className="w-full text-xs bg-zinc-50 rounded-md border border-border-light p-2 outline-none resize-none placeholder:text-zinc-300 focus:border-primary/30"
         />
 
-        <div>
-          <label className="text-[10px] font-semibold text-muted uppercase tracking-wider mb-1.5 block">Status</label>
-          <div className="flex gap-2">
-            {NOTE_STATUSES.map((s) => (
+        {isApproved && (
+          <>
+            <textarea
+              value={address}
+              onChange={(e) => setAddress(e.target.value)}
+              placeholder="📍 Address (optional)"
+              rows={2}
+              className="w-full text-xs bg-zinc-50 rounded-md border border-border-light p-2 outline-none resize-none placeholder:text-zinc-300 focus:border-primary/30"
+            />
+
+            <div>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                multiple
+                onChange={handleFileUpload}
+                className="hidden"
+              />
               <button
-                key={s.value}
                 type="button"
-                onClick={() => setStatus(s.value)}
-                className={`flex-1 py-1.5 text-xs font-medium rounded-lg transition-all ${
-                  status === s.value
-                    ? 'text-white shadow-sm'
-                    : 'bg-zinc-100 text-zinc-500 hover:bg-zinc-200'
-                }`}
-                style={status === s.value ? { backgroundColor: s.color } : undefined}
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploading}
+                className="w-full text-xs bg-white rounded-md border border-dashed border-blue-400 p-2 text-blue-500 font-medium hover:border-blue-500 hover:text-blue-600 hover:bg-blue-50 transition-colors flex items-center justify-center gap-1.5"
               >
-                {s.emoji} {s.label}
+                {uploading ? 'Uploading...' : '📎 Attach Files'}
               </button>
-            ))}
-          </div>
-        </div>
+              {attachments.length > 0 && (
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {attachments.map((url) => (
+                    <div key={url} className="relative group">
+                      <img src={url} alt="Attachment" className="w-14 h-14 rounded-md object-cover border border-border-light" />
+                      <button
+                        type="button"
+                        onClick={() => removeAttachment(url)}
+                        className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white rounded-full text-[8px] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </>
+        )}
 
         <div>
-          <label className="text-[10px] font-semibold text-muted uppercase tracking-wider mb-1.5 block">Tags</label>
+          <label className="text-[10px] font-semibold text-muted uppercase tracking-wider mb-1 block">Tag</label>
           <div className="flex flex-wrap gap-1.5">
-            {PRESET_TAGS.map((tag) => (
+            {tags.map((tag) => (
               <TagBadge
                 key={tag}
                 tag={tag}
                 color={TAG_DEFAULT_COLORS[tag]}
-                active={tags.includes(tag)}
+                active
                 onClick={() => toggleTag(tag)}
                 size="sm"
               />
             ))}
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setShowTagPicker(!showTagPicker)}
+                className="text-[9px] px-1.5 py-0.5 rounded-full border border-dashed border-blue-500 text-blue-500 hover:bg-blue-50 transition-colors font-medium"
+              >
+                + Add Tag
+              </button>
+              {showTagPicker && (
+                <div className="absolute top-full left-0 mt-1 bg-white rounded-lg border border-border shadow-lg p-2 z-10 flex flex-wrap gap-1.5 min-w-[160px]">
+                  {PRESET_TAGS.filter((t) => !tags.includes(t)).map((tag) => (
+                    <TagBadge
+                      key={tag}
+                      tag={tag}
+                      color={TAG_DEFAULT_COLORS[tag]}
+                      onClick={() => { toggleTag(tag); setShowTagPicker(false); }}
+                      size="sm"
+                    />
+                  ))}
+                  {PRESET_TAGS.filter((t) => !tags.includes(t)).length === 0 && (
+                    <span className="text-[10px] text-muted">All tags added</span>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
-        <div className="flex gap-2 pt-2">
+        <div className="flex gap-2 pt-1">
           <button
-            onClick={() => {
-              if (!title.trim()) return;
-              onSave({ title: title.trim(), description: description.trim() || undefined, color, tags, status, archived: false });
-            }}
+            type="submit"
             disabled={!title.trim()}
-            className="flex-1 py-2 text-sm font-semibold bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-40 transition-colors"
+            className="flex-1 py-2 text-xs font-semibold bg-primary text-white rounded-lg hover:bg-primary/90 disabled:opacity-40 transition-colors"
           >
             {note ? 'Save' : 'Add Idea'}
           </button>
           <button
+            type="button"
             onClick={onCancel}
-            className="px-4 py-2 text-sm text-muted bg-zinc-100 rounded-lg hover:bg-zinc-200 transition-colors"
+            className="px-4 py-2 text-xs text-muted bg-zinc-100 rounded-lg hover:bg-zinc-200 transition-colors"
           >
             Cancel
           </button>
+          {onDelete && note && (
+            <button
+              type="button"
+              onClick={onDelete}
+              className="p-2 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 hover:text-red-600 transition-colors"
+              title="Delete"
+            >
+              <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" />
+              </svg>
+            </button>
+          )}
         </div>
+      </form>
+    </div>
+  );
+}
+
+const EMPTY_PROFILE: CollabProfile = { name: '' };
+
+function SocialLinkToggles({
+  profile,
+  onUpdate,
+}: {
+  profile: CollabProfile;
+  onUpdate: (updates: Partial<CollabProfile>) => void;
+}) {
+  const [openFields, setOpenFields] = useState<Set<string>>(() => {
+    const initial = new Set<string>();
+    if (profile.twitchUrl) initial.add('twitch');
+    if (profile.kickUrl) initial.add('kick');
+    if (profile.igUrl) initial.add('ig');
+    if (profile.twitterUrl) initial.add('twitter');
+    if (profile.tiktokUrl) initial.add('tiktok');
+    return initial;
+  });
+
+  const toggle = (key: string) => {
+    setOpenFields((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) {
+        next.delete(key);
+        if (key === 'twitch') onUpdate({ twitchUrl: undefined });
+        if (key === 'kick') onUpdate({ kickUrl: undefined });
+        if (key === 'ig') onUpdate({ igUrl: undefined });
+        if (key === 'twitter') onUpdate({ twitterUrl: undefined });
+        if (key === 'tiktok') onUpdate({ tiktokUrl: undefined });
+      } else {
+        next.add(key);
+      }
+      return next;
+    });
+  };
+
+  const buttons = [
+    { key: 'twitch', label: (
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714z"/></svg>
+    ), title: 'Twitch', active: openFields.has('twitch'), color: 'text-purple-500 bg-purple-50 hover:bg-purple-100' },
+    { key: 'kick', label: (
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M2 2h6v4h2V2h4v4h-2v4h2v4h2v-4h4v4h-4v4h-2v2h-4v-4h2v-4H8v4H2v-4h4v-4H2z"/></svg>
+    ), title: 'Kick', active: openFields.has('kick'), color: 'text-green-500 bg-green-50 hover:bg-green-100' },
+    { key: 'ig', label: (
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg>
+    ), title: 'Instagram', active: openFields.has('ig'), color: 'text-pink-500 bg-pink-50 hover:bg-pink-100' },
+    { key: 'tiktok', label: (
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-2.88 2.5 2.89 2.89 0 01-2.89-2.89 2.89 2.89 0 012.89-2.89c.28 0 .54.04.79.1v-3.5a6.37 6.37 0 00-.79-.05A6.34 6.34 0 003.15 15.2a6.34 6.34 0 0010.86 4.48 6.3 6.3 0 001.86-4.49V8.75a8.26 8.26 0 004.84 1.56V6.84a4.85 4.85 0 01-1.12-.15z"/></svg>
+    ), title: 'TikTok', active: openFields.has('tiktok'), color: 'text-zinc-800 bg-zinc-100 hover:bg-zinc-200' },
+    { key: 'twitter', label: (
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+    ), title: 'X / Twitter', active: openFields.has('twitter'), color: 'text-zinc-700 bg-zinc-100 hover:bg-zinc-200' },
+  ];
+
+  return (
+    <div className="space-y-1.5">
+      <div className="flex gap-1.5">
+        {buttons.map((btn) => (
+          <button
+            key={btn.key}
+            type="button"
+            onClick={() => toggle(btn.key)}
+            className={`w-7 h-7 rounded-lg flex items-center justify-center transition-all ${
+              btn.active
+                ? `${btn.color} ring-1 ring-offset-1 ring-current`
+                : 'text-zinc-300 bg-zinc-50 hover:text-zinc-500 hover:bg-zinc-100'
+            }`}
+            title={btn.title}
+          >
+            <span className="text-sm">{btn.label}</span>
+          </button>
+        ))}
       </div>
+      {openFields.has('twitch') && (
+        <div className="flex gap-1.5 animate-fade-in">
+          <input value={profile.twitchUrl ?? ''} onChange={(e) => onUpdate({ twitchUrl: e.target.value || undefined })} placeholder="Twitch URL" className="flex-1 text-[10px] bg-white border border-purple-200 rounded px-2 py-1 outline-none placeholder:text-zinc-300" />
+          <input value={profile.twitchFollowers ?? ''} onChange={(e) => onUpdate({ twitchFollowers: e.target.value || undefined })} placeholder="Followers" className="w-20 text-[10px] bg-white border border-purple-200 rounded px-2 py-1 outline-none placeholder:text-zinc-300 text-right" />
+        </div>
+      )}
+      {openFields.has('kick') && (
+        <div className="flex gap-1.5 animate-fade-in">
+          <input value={profile.kickUrl ?? ''} onChange={(e) => onUpdate({ kickUrl: e.target.value || undefined })} placeholder="Kick URL" className="flex-1 text-[10px] bg-white border border-green-200 rounded px-2 py-1 outline-none placeholder:text-zinc-300" />
+          <input value={profile.kickFollowers ?? ''} onChange={(e) => onUpdate({ kickFollowers: e.target.value || undefined })} placeholder="Followers" className="w-20 text-[10px] bg-white border border-green-200 rounded px-2 py-1 outline-none placeholder:text-zinc-300 text-right" />
+        </div>
+      )}
+      {openFields.has('ig') && (
+        <div className="flex gap-1.5 animate-fade-in">
+          <input value={profile.igUrl ?? ''} onChange={(e) => onUpdate({ igUrl: e.target.value || undefined })} placeholder="Instagram URL" className="flex-1 text-[10px] bg-white border border-pink-200 rounded px-2 py-1 outline-none placeholder:text-zinc-300" />
+          <input value={profile.igFollowers ?? ''} onChange={(e) => onUpdate({ igFollowers: e.target.value || undefined })} placeholder="Followers" className="w-20 text-[10px] bg-white border border-pink-200 rounded px-2 py-1 outline-none placeholder:text-zinc-300 text-right" />
+        </div>
+      )}
+      {openFields.has('tiktok') && (
+        <div className="flex gap-1.5 animate-fade-in">
+          <input value={profile.tiktokUrl ?? ''} onChange={(e) => onUpdate({ tiktokUrl: e.target.value || undefined })} placeholder="TikTok URL" className="flex-1 text-[10px] bg-white border border-zinc-300 rounded px-2 py-1 outline-none placeholder:text-zinc-300" />
+          <input value={profile.tiktokFollowers ?? ''} onChange={(e) => onUpdate({ tiktokFollowers: e.target.value || undefined })} placeholder="Followers" className="w-20 text-[10px] bg-white border border-zinc-300 rounded px-2 py-1 outline-none placeholder:text-zinc-300 text-right" />
+        </div>
+      )}
+      {openFields.has('twitter') && (
+        <div className="flex gap-1.5 animate-fade-in">
+          <input value={profile.twitterUrl ?? ''} onChange={(e) => onUpdate({ twitterUrl: e.target.value || undefined })} placeholder="X / Twitter URL" className="flex-1 text-[10px] bg-white border border-zinc-300 rounded px-2 py-1 outline-none placeholder:text-zinc-300" />
+          <input value={profile.twitterFollowers ?? ''} onChange={(e) => onUpdate({ twitterFollowers: e.target.value || undefined })} placeholder="Followers" className="w-20 text-[10px] bg-white border border-zinc-300 rounded px-2 py-1 outline-none placeholder:text-zinc-300 text-right" />
+        </div>
+      )}
+    </div>
+  );
+}
+
+function CollabEditor({
+  note,
+  onSave,
+  onCancel,
+  onDelete,
+}: {
+  note?: ScratchNote;
+  onSave: (data: Partial<ScratchNote> & { title: string; color: string; collabProfiles: CollabProfile[] }) => void;
+  onCancel: () => void;
+  onDelete?: () => void;
+}) {
+  const [title, setTitle] = useState(note?.title ?? '');
+  const [color, setColor] = useState(note?.color ?? '#000000');
+  const [tags, setTags] = useState<string[]>(note?.tags ?? []);
+  const [notes, setNotes] = useState(note?.description ?? '');
+  const [profiles, setProfiles] = useState<CollabProfile[]>(
+    note?.collabProfiles?.length ? [...note.collabProfiles] : [{ ...EMPTY_PROFILE }]
+  );
+  const [showTagPicker, setShowTagPicker] = useState(false);
+
+  const updateProfile = (index: number, updates: Partial<CollabProfile>) => {
+    setProfiles((prev) => prev.map((p, i) => (i === index ? { ...p, ...updates } : p)));
+  };
+
+  const addProfile = () => setProfiles((prev) => [...prev, { ...EMPTY_PROFILE }]);
+  const removeProfile = (index: number) =>
+    setProfiles((prev) => (prev.length <= 1 ? prev : prev.filter((_, i) => i !== index)));
+
+  const toggleTag = (tag: string) => {
+    const wasActive = tags.includes(tag);
+    setTags((prev) => (wasActive ? prev.filter((t) => t !== tag) : [...prev, tag]));
+    if (!wasActive && TAG_DEFAULT_COLORS[tag]) setColor(TAG_DEFAULT_COLORS[tag]);
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const valid = profiles.filter((p) => p.name.trim());
+    if (valid.length === 0) return;
+    const displayTitle = title.trim() || (valid.length === 1 ? valid[0].name : `Collab: ${valid.map((p) => p.name).join(', ')}`);
+    const payload: Parameters<typeof onSave>[0] = {
+      title: displayTitle,
+      color,
+      tags,
+      description: notes.trim() || undefined,
+      collabProfiles: valid,
+      archived: false,
+    };
+    if (!note) payload.status = 'workshop';
+    onSave(payload);
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm animate-fade-in" onClick={onCancel}>
+      <form
+        onSubmit={handleSubmit}
+        className="bg-white rounded-xl border border-border p-4 space-y-3 animate-scale-in shadow-lg max-h-[85vh] overflow-y-auto max-w-lg w-full"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <h3 className="text-sm font-bold text-foreground">Add collab profile</h3>
+        <input
+          autoFocus
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          placeholder="Collab title (optional)"
+          className="w-full text-sm font-semibold bg-transparent border-b border-border-light pb-1 outline-none placeholder:text-zinc-300 focus:border-primary/30 transition-colors"
+        />
+
+        <div className="space-y-3 max-h-[40vh] overflow-y-auto pr-1">
+          {profiles.map((profile, idx) => (
+            <div key={idx} className="p-3 rounded-lg border border-border-light bg-zinc-50/50 space-y-2">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-[10px] font-semibold text-muted uppercase">Profile {idx + 1}</span>
+                <div className="flex gap-1">
+                  {profiles.length > 1 && (
+                    <button type="button" onClick={() => removeProfile(idx)} className="text-[10px] text-red-500 hover:text-red-600">
+                      Remove
+                    </button>
+                  )}
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <div className="flex-shrink-0 w-12 h-12 rounded-full overflow-hidden bg-zinc-200 flex items-center justify-center">
+                  {profile.profilePicUrl ? (
+                    <img src={profile.profilePicUrl} alt="" className="w-full h-full object-cover" />
+                  ) : (
+                    <svg width="20" height="20" fill="none" stroke="#a1a1aa" strokeWidth="2" viewBox="0 0 24 24">
+                      <path d="M12 5v14M5 12h14" />
+                    </svg>
+                  )}
+                </div>
+                <div className="flex-1 min-w-0 space-y-1.5">
+                  <input
+                    value={profile.name}
+                    onChange={(e) => updateProfile(idx, { name: e.target.value })}
+                    placeholder="Name"
+                    className="w-full text-xs bg-white border border-border-light rounded px-2 py-1 outline-none placeholder:text-zinc-300"
+                  />
+                </div>
+              </div>
+              <SocialLinkToggles profile={profile} onUpdate={(updates) => updateProfile(idx, updates)} />
+              <div className="flex gap-2 items-end">
+                <textarea
+                  value={profile.notes ?? ''}
+                  onChange={(e) => updateProfile(idx, { notes: e.target.value || undefined })}
+                  placeholder="Notes about this person"
+                  rows={2}
+                  className="flex-1 text-[10px] bg-white border border-border-light rounded px-2 py-1 outline-none resize-none placeholder:text-zinc-300"
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (profile.name.trim()) {
+                      updateProfile(idx, { ...profile });
+                    }
+                  }}
+                  disabled={!profile.name.trim()}
+                  className="px-3 py-1.5 text-[10px] font-semibold bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-40 transition-colors flex-shrink-0"
+                >
+                  Save
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <button type="button" onClick={addProfile} className="w-full py-2 text-[11px] font-medium text-blue-500 border border-dashed border-blue-300 rounded-lg hover:bg-blue-50/50 transition-colors">
+          + Add another influencer
+        </button>
+
+        <textarea
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
+          placeholder="General notes for this collab"
+          rows={2}
+          className="w-full text-xs bg-zinc-50 rounded-md border border-border-light p-2 outline-none resize-none placeholder:text-zinc-300"
+        />
+
+        <div className="flex gap-2 pt-1">
+          <button type="submit" disabled={profiles.every((p) => !p.name.trim())} className="flex-1 py-2 text-xs font-semibold bg-primary text-white rounded-lg hover:bg-primary/90 disabled:opacity-40 transition-colors">
+            {note ? 'Save' : 'Add Collab'}
+          </button>
+          <button type="button" onClick={onCancel} className="px-4 py-2 text-xs text-muted bg-zinc-100 rounded-lg hover:bg-zinc-200">
+            Cancel
+          </button>
+          {onDelete && note && (
+            <button type="button" onClick={onDelete} className="p-2 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 hover:text-red-600" title="Delete">
+              <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" />
+              </svg>
+            </button>
+          )}
+        </div>
+      </form>
     </div>
   );
 }
 
 export default function ContentPage() {
-  const { notes, addNote, updateNote, deleteNote, loadFromSupabase, loaded } = useStore();
+  const { notes, events, addNote, updateNote, deleteNote, loadFromSupabase, loaded } = useStore();
   const [editingNote, setEditingNote] = useState<ScratchNote | null>(null);
   const [showNewForm, setShowNewForm] = useState(false);
+  const [newFormStatus, setNewFormStatus] = useState<NoteStatus>('idea');
   const [filterTag, setFilterTag] = useState<string | null>(null);
+
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+  const [chatInput, setChatInput] = useState('');
+  const [chatLoading, setChatLoading] = useState(false);
+  const [navOpen, setNavOpen] = useState(false);
+  const chatEndRef = useRef<HTMLDivElement>(null);
+  const navRef = useRef<HTMLDivElement>(null);
+  const pathname = usePathname();
 
   useEffect(() => {
     if (!loaded) loadFromSupabase();
   }, [loaded, loadFromSupabase]);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (navRef.current && !navRef.current.contains(e.target as Node)) setNavOpen(false);
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [chatMessages]);
+
+  const sensors = useSensors(
+    useSensor(MouseSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 5 } })
+  );
+
+  const handleDragEnd = useCallback(
+    (event: DragEndEvent) => {
+      const { active, over } = event;
+      if (!over) return;
+      const activeData = active.data.current as { type: string; note: ScratchNote } | undefined;
+      const overData = over.data.current as { type: string; status?: NoteStatus; note?: ScratchNote } | undefined;
+      if (activeData?.type !== 'content-note' || !overData) return;
+      const targetStatus: NoteStatus | null =
+        overData.type === 'content-column' ? (overData.status ?? null)
+        : overData.type === 'content-note' && overData.note ? (overData.note.status ?? 'idea')
+        : null;
+      if (!targetStatus || activeData.note.status === targetStatus) return;
+      updateNote(activeData.note.id, { status: targetStatus });
+    },
+    [updateNote]
+  );
 
   const activeNotes = notes.filter((n) => !n.archived && (!filterTag || n.tags.includes(filterTag)));
 
@@ -203,103 +738,240 @@ export default function ContentPage() {
     if (editingNote) {
       updateNote(editingNote.id, data);
     } else {
-      addNote({ ...data, tags: data.tags ?? [], archived: false });
+      addNote({ ...data, tags: data.tags ?? [], archived: false, status: data.status ?? newFormStatus });
     }
     setEditingNote(null);
     setShowNewForm(false);
   };
 
+  const buildContext = () => {
+    const activeNotes = notes.filter((n) => !n.archived);
+    const approved = activeNotes.filter((n) => n.status === 'ready');
+    const ideas = activeNotes.filter((n) => n.status === 'idea');
+    const workshopCollabs = activeNotes.filter((n) => n.status === 'workshop');
+
+    const formatNote = (n: typeof activeNotes[0]) => {
+      let line = `- ${n.title}`;
+      if (n.tags.length > 0) line += ` [tags: ${n.tags.join(', ')}]`;
+      if (n.description) line += ` — ${n.description}`;
+      if (n.address) line += ` | location: ${n.address}`;
+      if (n.collabProfiles && n.collabProfiles.length > 0) {
+        const names = n.collabProfiles.map((p) => p.name || 'unnamed').join(', ');
+        line += ` | collabs: ${names}`;
+      }
+      return line;
+    };
+
+    const formatEvent = (e: typeof events[0]) => {
+      let line = `- ${e.title} [${e.date}, ${e.startTime}–${e.endTime}]`;
+      if (e.tags.length > 0) line += ` tags: ${e.tags.join(', ')}`;
+      line += e.confirmed ? ' (confirmed)' : ' (tentative)';
+      if (e.description) line += ` — ${e.description}`;
+      if (e.address) line += ` | location: ${e.address}`;
+      if (e.contact) line += ` | contact: ${e.contact}`;
+      return line;
+    };
+
+    const sections: string[] = [];
+
+    sections.push(events.length > 0
+      ? `SCHEDULED CALENDAR EVENTS (this is what's actually on the calendar — study this to understand their content style and preferences):\n${events.map(formatEvent).join('\n')}`
+      : 'SCHEDULED CALENDAR EVENTS: None scheduled yet.');
+
+    sections.push(approved.length > 0
+      ? `APPROVED IDEAS (these have been greenlit and are ready to schedule — the creator is committed to these):\n${approved.map(formatNote).join('\n')}`
+      : 'APPROVED IDEAS: None yet.');
+
+    sections.push(ideas.length > 0
+      ? `BRAINSTORM IDEAS (works in progress — these are being considered):\n${ideas.map(formatNote).join('\n')}`
+      : 'BRAINSTORM IDEAS: None yet.');
+
+    if (workshopCollabs.length > 0) {
+      sections.push(`POTENTIAL COLLABS (creators they're considering working with):\n${workshopCollabs.map(formatNote).join('\n')}`);
+    }
+
+    return sections.join('\n\n');
+  };
+
+  const sendMessage = async () => {
+    if (!chatInput.trim() || chatLoading) return;
+    const userMsg: ChatMessage = { role: 'user', content: chatInput.trim() };
+    const newMessages = [...chatMessages, userMsg];
+    setChatMessages(newMessages);
+    setChatInput('');
+    setChatLoading(true);
+
+    try {
+      const res = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          messages: newMessages,
+          context: buildContext(),
+        }),
+      });
+      const data = await res.json();
+      if (data.message) {
+        setChatMessages([...newMessages, { role: 'assistant', content: data.message }]);
+      } else {
+        setChatMessages([...newMessages, { role: 'assistant', content: `Error: ${data.error || 'Something went wrong'}` }]);
+      }
+    } catch {
+      setChatMessages([...newMessages, { role: 'assistant', content: 'Failed to connect to AI. Make sure OPENAI_API_KEY is set.' }]);
+    }
+    setChatLoading(false);
+  };
+
   return (
-    <div className="h-screen flex flex-col bg-background">
-      <header className="flex items-center justify-between px-6 py-3 bg-surface border-b border-border">
-        <div className="flex items-center gap-3">
-          <a href="/" className="p-1.5 rounded-lg hover:bg-zinc-100 text-muted hover:text-foreground transition-colors" title="Back to Calendar">
-            <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-              <path d="M15 18l-6-6 6-6" />
-            </svg>
-          </a>
-          <h1 className="text-xl font-bold tracking-tight text-black">
+    <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+    <div className="h-screen flex flex-col" style={{ background: '#e8e8eb' }}>
+      <header className="relative flex items-center px-6 py-3 bg-white" style={{ boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
+        <a href="/" className="overflow-hidden flex items-center justify-center flex-shrink-0" title="Back to Calendar" style={{ width: '116px', height: '61px' }}>
+          <img src="/Favicon.png" alt="Clav Cal" className="h-auto scale-125 translate-y-1" style={{ width: '162px' }} />
+        </a>
+
+        <div ref={navRef} className="absolute left-1/2 -translate-x-1/2">
+          <button
+            onClick={() => setNavOpen((o) => !o)}
+            className="flex items-center gap-1 text-2xl font-bold tracking-tight text-black hover:opacity-80 transition-opacity"
+          >
             <span className="text-blue-500">Content</span> Workshop
-          </h1>
+            <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" className={`ml-0.5 transition-transform ${navOpen ? 'rotate-180' : ''}`} viewBox="0 0 24 24">
+              <path d="M6 9l6 6 6-6" />
+            </svg>
+          </button>
+          {navOpen && (() => {
+            const otherPages = NAV_ITEMS.filter((item) => item.href !== pathname);
+            if (otherPages.length === 0) return null;
+            return (
+              <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 bg-white rounded-lg border border-border shadow-lg py-1 min-w-[180px] z-50">
+                {otherPages.map((item) => (
+                  <a
+                    key={item.href}
+                    href={item.href}
+                    onClick={() => setNavOpen(false)}
+                    className="block px-4 py-2 text-xl font-bold tracking-tight whitespace-nowrap hover:bg-zinc-50 transition-colors"
+                  >
+                    <span className="text-blue-500">{item.accent}</span> {item.rest}
+                  </a>
+                ))}
+              </div>
+            );
+          })()}
         </div>
 
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-1.5">
-            <span className="text-[10px] font-semibold text-muted uppercase tracking-wider">Filter:</span>
-            {PRESET_TAGS.map((tag) => {
-              const tagColor = TAG_DEFAULT_COLORS[tag];
-              const isActive = filterTag === tag;
-              return (
-                <button
-                  key={tag}
-                  onClick={() => setFilterTag(isActive ? null : tag)}
-                  className={`text-[10px] px-2 py-0.5 rounded-full font-medium transition-all ${
-                    isActive ? 'ring-1 ring-offset-1' : 'border hover:opacity-80'
-                  }`}
-                  style={
-                    isActive
-                      ? { backgroundColor: tagColor, color: '#fff' }
-                      : { backgroundColor: tagColor + '18', color: tagColor, borderColor: tagColor + '40' }
-                  }
-                >
-                  {tag}
-                </button>
-              );
-            })}
-            {filterTag && (
-              <button onClick={() => setFilterTag(null)} className="text-[10px] text-red-400 hover:text-red-500 ml-1">Clear</button>
-            )}
-          </div>
-          <button
-            onClick={() => { setEditingNote(null); setShowNewForm(true); }}
-            className="px-3 py-1.5 text-xs font-semibold bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
-          >
-            + New Idea
-          </button>
-        </div>
       </header>
 
-      <div className="flex-1 overflow-hidden flex gap-4 p-4">
-        {NOTE_STATUSES.map((col) => {
-          const colNotes = getNotesForStatus(col.value);
-          return (
-            <div key={col.value} className="flex-1 flex flex-col min-w-0">
-              <div className="flex items-center gap-2 mb-3 px-1">
-                <span className="text-base">{col.emoji}</span>
-                <h2 className="text-sm font-bold text-foreground">{col.label}</h2>
-                <span className="text-[10px] font-semibold text-muted bg-zinc-100 rounded-full px-1.5 py-0.5">
-                  {colNotes.length}
-                </span>
+      <div className="flex-1 overflow-hidden flex gap-4 p-4 bg-white">
+        {NOTE_STATUSES.map((col) => (
+          <ContentColumn
+            key={col.value}
+            status={col.value}
+            colNotes={getNotesForStatus(col.value)}
+            onAddNew={(status) => { setEditingNote(null); setNewFormStatus(status); setShowNewForm(true); }}
+            onEditNote={(note) => setEditingNote(note)}
+            onMoveNote={(noteId, status) => updateNote(noteId, { status })}
+            onDeleteNote={(noteId) => deleteNote(noteId)}
+          />
+        ))}
+
+        <div className="flex-1 flex flex-col min-w-0">
+          <div className="flex-1 flex flex-col rounded-2xl overflow-hidden bg-white border border-border-light">
+            <div className="flex items-center gap-2 px-3 py-2 border-b border-border-light flex-shrink-0">
+              <span className="text-lg">🧠</span>
+              <div>
+                <p className="text-sm font-semibold text-foreground leading-tight">StreamBrain</p>
+                <p className="text-[10px] text-muted leading-tight">Your viral content strategist</p>
               </div>
-              <div className="flex-1 overflow-y-auto space-y-2 rounded-xl bg-zinc-50/50 p-2 border border-border-light">
-                {colNotes.map((note) => (
-                  <ContentCard
-                    key={note.id}
-                    note={note}
-                    onEdit={() => setEditingNote(note)}
-                    onMove={(status) => updateNote(note.id, { status })}
-                    onDelete={() => deleteNote(note.id)}
-                  />
-                ))}
-                {colNotes.length === 0 && (
-                  <div className="text-center py-8 text-zinc-300">
-                    <div className="text-2xl mb-1">{col.emoji}</div>
-                    <p className="text-[11px]">No {col.label.toLowerCase()} items</p>
+              {chatMessages.length > 0 && (
+                <button
+                  onClick={() => setChatMessages([])}
+                  className="ml-auto text-[10px] text-muted hover:text-red-500 transition-colors"
+                  title="Clear chat"
+                >
+                  Clear
+                </button>
+              )}
+            </div>
+            <div className="flex-1 overflow-y-auto p-3 space-y-3">
+              {chatMessages.length === 0 && (
+                <div className="text-center py-8">
+                  <p className="text-[11px] text-muted max-w-[220px] mx-auto">
+                    Ask for ideas, feedback on your schedule, or help workshopping content.
+                  </p>
+                  <div className="flex flex-wrap gap-1.5 justify-center mt-4">
+                    {['Give me 5 stream ideas', 'Review my schedule', 'What\'s trending?', 'Help me plan a collab'].map((q) => (
+                      <button
+                        key={q}
+                        onClick={() => { setChatInput(q); }}
+                        className="text-[10px] px-2 py-1 rounded-lg text-foreground hover:text-blue-600 bg-zinc-100 hover:bg-zinc-200 transition-colors"
+                      >
+                        {q}
+                      </button>
+                    ))}
                   </div>
-                )}
+                </div>
+              )}
+              {chatMessages.map((msg, i) => (
+                <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                  <div
+                    className={`max-w-[85%] rounded-lg px-3 py-2 text-xs leading-relaxed whitespace-pre-wrap ${
+                      msg.role === 'user'
+                        ? 'bg-blue-500 text-white'
+                        : 'bg-zinc-100 text-foreground'
+                    }`}
+                  >
+                    {msg.content}
+                  </div>
+                </div>
+              ))}
+              {chatLoading && (
+                <div className="flex justify-start">
+                  <div className="rounded-lg px-3 py-2 text-xs text-muted bg-zinc-100">
+                    <span className="animate-pulse">Thinking...</span>
+                  </div>
+                </div>
+              )}
+              <div ref={chatEndRef} />
+            </div>
+            <div className="p-2 border-t border-border-light">
+              <div className="flex gap-2">
+                <input
+                  value={chatInput}
+                  onChange={(e) => setChatInput(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } }}
+                  placeholder="Ask StreamBrain..."
+                  className="flex-1 text-xs bg-white border border-border-light text-foreground rounded-lg px-3 py-2 outline-none placeholder:text-muted focus:ring-1 focus:ring-blue-400"
+                />
+                <button
+                  onClick={sendMessage}
+                  disabled={!chatInput.trim() || chatLoading}
+                  className="px-3 py-2 text-xs font-semibold bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-40 transition-colors"
+                >
+                  Send
+                </button>
               </div>
             </div>
-          );
-        })}
+          </div>
+        </div>
       </div>
 
-      {(showNewForm || editingNote) && (
+      {(showNewForm || editingNote) && (newFormStatus === 'workshop' || (editingNote?.collabProfiles?.length ?? 0) > 0) ? (
+        <CollabEditor
+          note={editingNote ?? undefined}
+          onSave={handleSave as (data: Partial<ScratchNote> & { title: string; color: string; collabProfiles: CollabProfile[] }) => void}
+          onCancel={() => { setShowNewForm(false); setEditingNote(null); }}
+          onDelete={editingNote ? () => { deleteNote(editingNote.id); setEditingNote(null); setShowNewForm(false); } : undefined}
+        />
+      ) : (showNewForm || editingNote) ? (
         <NoteEditor
           note={editingNote ?? undefined}
           onSave={handleSave}
           onCancel={() => { setShowNewForm(false); setEditingNote(null); }}
+          onDelete={editingNote ? () => { deleteNote(editingNote.id); setEditingNote(null); setShowNewForm(false); } : undefined}
         />
-      )}
+      ) : null}
     </div>
+    </DndContext>
   );
 }

@@ -12,6 +12,7 @@ interface EventEditorProps {
   event?: CalendarEvent;
   date: string;
   defaultStartTime?: string;
+  existingEvents?: CalendarEvent[];
   onSave: (data: Omit<CalendarEvent, 'id'>) => void;
   onDelete?: () => void;
   onCancel: () => void;
@@ -21,6 +22,7 @@ export default function EventEditor({
   event,
   date,
   defaultStartTime = '10:00',
+  existingEvents = [],
   onSave,
   onDelete,
   onCancel,
@@ -31,7 +33,7 @@ export default function EventEditor({
     ? (timeToMinutes(event.endTime) - timeToMinutes(event.startTime)) / 60
     : 1;
   const [segmentLength, setSegmentLength] = useState(defaultLength);
-  const [color, setColor] = useState(event?.color ?? '#3b82f6');
+  const [color, setColor] = useState(event?.color ?? '#000000');
   const [address, setAddress] = useState(event?.address ?? '');
   const [contact, setContact] = useState(event?.contact ?? '');
   const [description, setDescription] = useState(event?.description ?? '');
@@ -40,6 +42,7 @@ export default function EventEditor({
   const [attachments, setAttachments] = useState<string[]>(event?.attachments ?? []);
   const [uploading, setUploading] = useState(false);
   const [showTagPicker, setShowTagPicker] = useState(false);
+  const [overlapError, setOverlapError] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -84,6 +87,20 @@ export default function EventEditor({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim()) return;
+    const newStart = timeToMinutes(startTime);
+    const newEnd = timeToMinutes(computeEndTime());
+    const hasOverlap = existingEvents
+      .filter((ev) => ev.id !== event?.id)
+      .some((ev) => {
+        const evStart = timeToMinutes(ev.startTime);
+        const evEnd = timeToMinutes(ev.endTime);
+        return newStart < evEnd && newEnd > evStart;
+      });
+    if (hasOverlap) {
+      setOverlapError(true);
+      return;
+    }
+    setOverlapError(false);
     onSave({
       date,
       startTime,
@@ -117,17 +134,17 @@ export default function EventEditor({
         value={title}
         onChange={(e) => setTitle(e.target.value)}
         placeholder="Activity name..."
-        className="w-full text-sm font-semibold bg-transparent border-b border-border-light pb-1 outline-none placeholder:text-zinc-300 focus:border-primary/30 transition-colors"
+        className="w-full text-sm font-semibold text-center bg-transparent border-b border-border-light pb-1 outline-none placeholder:text-zinc-300 focus:border-primary/30 transition-colors"
       />
 
       <label
         className="flex items-center gap-2 cursor-pointer select-none"
         onClick={() => setConfirmed(!confirmed)}
       >
-        <span className="text-xs text-muted">Confirmed</span>
+        <span className={`text-xs font-medium transition-colors ${confirmed ? 'text-green-600' : 'text-red-500'}`}>Confirmed</span>
         <div
           className={`w-4 h-4 rounded border-2 flex items-center justify-center transition-colors ${
-            confirmed ? 'bg-green-500 border-green-500' : 'bg-white border-zinc-300'
+            confirmed ? 'bg-green-500 border-green-500' : 'bg-white border-red-300'
           }`}
         >
           {confirmed && (
@@ -242,7 +259,7 @@ export default function EventEditor({
           type="button"
           onClick={() => fileInputRef.current?.click()}
           disabled={uploading}
-          className="w-full text-xs bg-zinc-50 rounded-md border border-dashed border-zinc-300 p-2 text-zinc-400 hover:border-zinc-400 hover:text-zinc-600 transition-colors flex items-center justify-center gap-1.5"
+          className="w-full text-xs bg-white rounded-md border border-dashed border-blue-400 p-2 text-blue-500 font-medium hover:border-blue-500 hover:text-blue-600 hover:bg-blue-50 transition-colors flex items-center justify-center gap-1.5"
         >
           {uploading ? 'Uploading...' : '📎 Attach Files'}
         </button>
@@ -268,13 +285,26 @@ export default function EventEditor({
         )}
       </div>
 
+      {overlapError && (
+        <div className="bg-red-50 border border-red-300 rounded-lg p-3 flex items-start gap-2">
+          <span className="text-red-500 text-sm flex-shrink-0">⚠️</span>
+          <div>
+            <p className="text-xs font-semibold text-red-600">Time overlap error</p>
+            <p className="text-[10px] text-red-500 mt-0.5">This time conflicts with an existing event. Please adjust the start time or duration.</p>
+          </div>
+          <button type="button" onClick={() => setOverlapError(false)} className="text-red-400 hover:text-red-600 ml-auto flex-shrink-0">
+            <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12" /></svg>
+          </button>
+        </div>
+      )}
+
       <div className="flex gap-2 pt-1">
         <button
           type="submit"
           disabled={!title.trim()}
           className="flex-1 py-2 text-xs font-semibold bg-primary text-white rounded-lg hover:bg-primary/90 disabled:opacity-40 transition-colors"
         >
-          Add
+          {event ? 'Save' : 'Add'}
         </button>
         <button
           type="button"
@@ -287,7 +317,7 @@ export default function EventEditor({
           <button
             type="button"
             onClick={onDelete}
-            className="p-2 rounded-lg bg-zinc-100 text-zinc-400 hover:bg-red-50 hover:text-red-500 transition-colors"
+            className="p-2 rounded-lg bg-zinc-100 text-red-500 hover:bg-red-50 transition-colors"
             title="Delete"
           >
             <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">

@@ -52,21 +52,14 @@ export default function ScratchPanel({ searchRef, showFormDefault }: ScratchPane
   return (
     <div className="flex flex-col h-full bg-surface border-l border-border">
       <div className="p-3 border-b border-border space-y-2">
-        <h3 className="text-sm font-bold text-foreground uppercase tracking-wider text-center">Content Ideas</h3>
         <div className="flex items-center gap-2">
+          <h3 className="text-sm font-bold text-foreground uppercase tracking-wider">Content Ideas</h3>
           <button
             onClick={() => { setEditingNote(null); setShowForm(true); }}
-            className="px-2.5 py-1.5 text-xs font-semibold rounded-md bg-white text-black border border-border hover:bg-zinc-50 transition-colors"
+            className="px-2.5 py-1.5 text-xs font-semibold rounded-md bg-white text-blue-500 border border-dashed border-blue-500 hover:bg-blue-50 transition-colors"
           >
             + New
           </button>
-          <div className="flex-1" />
-          <a
-            href="/content"
-            className="px-2.5 py-1.5 text-xs font-semibold rounded-md bg-blue-500 text-white hover:bg-blue-600 transition-colors"
-          >
-            Content Page →
-          </a>
         </div>
 
         <div className="relative">
@@ -74,8 +67,8 @@ export default function ScratchPanel({ searchRef, showFormDefault }: ScratchPane
             ref={searchRef}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search notes... ( / )"
-            className="w-full text-xs bg-zinc-50 rounded-md border border-border-light py-1.5 pl-9 pr-2 outline-none placeholder:text-zinc-300 focus:border-primary/30 transition-colors"
+            placeholder="Search"
+            className="w-full text-xs bg-zinc-50 rounded-md border border-border-light py-1.5 pl-9 pr-2 outline-none placeholder:text-black focus:border-primary/30 transition-colors"
           />
           <svg
             className="absolute left-2 top-1/2 -translate-y-1/2 text-black"
@@ -115,7 +108,7 @@ export default function ScratchPanel({ searchRef, showFormDefault }: ScratchPane
           })}
           <button
             onClick={() => setShowAddTag(!showAddTag)}
-            className="text-[10px] px-2 py-0.5 rounded-full border border-dashed border-zinc-300 text-zinc-400 hover:border-zinc-400 hover:text-zinc-600 transition-colors font-medium"
+            className="text-[10px] px-2 py-0.5 rounded-full border border-dashed border-blue-500 text-blue-500 hover:bg-blue-50 transition-colors font-medium"
           >
             + Add Tag
           </button>

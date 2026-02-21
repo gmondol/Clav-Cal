@@ -44,7 +44,13 @@ interface StoreState {
   loadSeedData: () => void;
 }
 
+const COLLAB_PREFIX = '\u0001COLLAB:';
+
 function noteToRow(note: ScratchNote) {
+  let description: string | null = note.description ?? null;
+  if (note.collabProfiles && note.collabProfiles.length > 0) {
+    description = COLLAB_PREFIX + JSON.stringify({ collabProfiles: note.collabProfiles, notes: note.description ?? '' });
+  }
   return {
     id: note.id,
     title: note.title,
@@ -52,14 +58,30 @@ function noteToRow(note: ScratchNote) {
     tags: note.tags,
     created_at: note.createdAt,
     archived: note.archived,
-    description: note.description ?? null,
+    description,
     keep_in_scratch: note.keepInScratch ?? false,
     complexity: note.complexity ?? null,
     status: note.status ?? 'idea',
+    address: note.address ?? null,
+    attachments: note.attachments ?? [],
   };
 }
 
 function rowToNote(row: Record<string, unknown>): ScratchNote {
+  const rawDesc = (row.description as string) ?? undefined;
+  let description: string | undefined;
+  let collabProfiles: ScratchNote['collabProfiles'];
+  if (rawDesc?.startsWith(COLLAB_PREFIX)) {
+    try {
+      const parsed = JSON.parse(rawDesc.slice(COLLAB_PREFIX.length)) as { collabProfiles: ScratchNote['collabProfiles']; notes: string };
+      collabProfiles = parsed.collabProfiles;
+      description = parsed.notes || undefined;
+    } catch {
+      description = rawDesc;
+    }
+  } else {
+    description = rawDesc;
+  }
   return {
     id: row.id as string,
     title: row.title as string,
@@ -67,10 +89,13 @@ function rowToNote(row: Record<string, unknown>): ScratchNote {
     tags: (row.tags as string[]) ?? [],
     createdAt: row.created_at as string,
     archived: row.archived as boolean,
-    description: (row.description as string) ?? undefined,
+    description,
+    collabProfiles,
     keepInScratch: (row.keep_in_scratch as boolean) ?? undefined,
     complexity: (row.complexity as ScratchNote['complexity']) ?? undefined,
     status: (row.status as ScratchNote['status']) ?? 'idea',
+    address: (row.address as string) ?? undefined,
+    attachments: (row.attachments as string[]) ?? [],
   };
 }
 
@@ -145,18 +170,29 @@ export const useStore = create<StoreState>()(
     },
 
     updateNote: (id, updates) => {
+      const merged = get().notes.find((n) => n.id === id);
+      const next = merged ? { ...merged, ...updates } : null;
       set((s) => ({
-        notes: s.notes.map((n) => (n.id === id ? { ...n, ...updates } : n)),
+        notes: s.notes.map((n) => (n.id === id ? (next ?? { ...n, ...updates }) : n)),
       }));
       const row: Record<string, unknown> = {};
       if (updates.title !== undefined) row.title = updates.title;
       if (updates.color !== undefined) row.color = updates.color;
       if (updates.tags !== undefined) row.tags = updates.tags;
       if (updates.archived !== undefined) row.archived = updates.archived;
-      if (updates.description !== undefined) row.description = updates.description;
       if (updates.keepInScratch !== undefined) row.keep_in_scratch = updates.keepInScratch;
       if (updates.complexity !== undefined) row.complexity = updates.complexity;
       if (updates.status !== undefined) row.status = updates.status;
+      if (updates.description !== undefined || updates.collabProfiles !== undefined) {
+        const note = next ?? merged;
+        const profiles = updates.collabProfiles ?? note?.collabProfiles;
+        const notes = updates.description !== undefined ? updates.description : (note?.description ?? '');
+        row.description = profiles && profiles.length > 0
+          ? COLLAB_PREFIX + JSON.stringify({ collabProfiles: profiles, notes })
+          : (notes || null);
+      }
+      if (updates.address !== undefined) row.address = updates.address || null;
+      if (updates.attachments !== undefined) row.attachments = updates.attachments;
       if (Object.keys(row).length > 0) {
         supabase.from('notes').update(row).eq('id', id).then();
       }
@@ -278,9 +314,11 @@ export const useStore = create<StoreState>()(
         endTime: `${(parseInt(startTime.split(':')[0]) + 1).toString().padStart(2, '0')}:${startTime.split(':')[1]}`,
         title: note.title,
         color: note.color,
+        address: note.address,
         description: note.description,
         tags: [...note.tags],
         complexity: note.complexity,
+        attachments: note.attachments ?? [],
         fromNoteId: noteId,
       };
       set((s) => ({

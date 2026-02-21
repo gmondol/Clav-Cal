@@ -11,7 +11,7 @@ export default function WeeklyGoals() {
   const selectedDate = useStore((s) => s.selectedDate);
   const currentView = useStore((s) => s.currentView);
 
-  const { filteredEvents, tagCounts, label, totalHours } = useMemo(() => {
+  const { filteredEvents, tagCounts, label, totalHours, tagOrder } = useMemo(() => {
     const date = new Date(selectedDate + 'T00:00:00');
     let rangeStart: string;
     let rangeEnd: string;
@@ -29,27 +29,32 @@ export default function WeeklyGoals() {
 
     const filteredEvents = events.filter((e) => e.date >= rangeStart && e.date <= rangeEnd);
     const tagCounts: Record<string, number> = {};
-    for (const tag of PRESET_TAGS) {
+    const allTags = new Set<string>(PRESET_TAGS as unknown as string[]);
+    for (const e of filteredEvents) {
+      for (const t of e.tags) allTags.add(t);
+    }
+    for (const tag of allTags) {
       tagCounts[tag] = filteredEvents.filter((e) => e.tags.includes(tag)).length;
     }
     const totalHours = filteredEvents.reduce((sum, e) => {
       return sum + (timeToMinutes(e.endTime) - timeToMinutes(e.startTime)) / 60;
     }, 0);
-    return { filteredEvents, tagCounts, label, totalHours };
+    const tagOrder = [...PRESET_TAGS, ...[...allTags].filter((t) => !PRESET_TAGS.includes(t as typeof PRESET_TAGS[number])).sort()];
+    return { filteredEvents, tagCounts, label, totalHours, tagOrder };
   }, [events, selectedDate, currentView]);
 
   return (
     <div className="flex items-center gap-4 px-6 py-2 bg-surface border-b border-border">
       <span className="text-[10px] font-semibold text-muted uppercase tracking-wider">{label}</span>
-      <div className="flex gap-3">
-        {PRESET_TAGS.map((tag) => (
+      <div className="flex gap-3 flex-wrap">
+        {tagOrder.map((tag) => (
           <div key={tag} className="flex items-center gap-1.5">
             <div
               className="w-2 h-2 rounded-full"
               style={{ backgroundColor: TAG_DEFAULT_COLORS[tag] ?? '#94a3b8' }}
             />
-            <span className="text-xs text-muted">
-              {tag}: <span className="font-semibold text-foreground">{tagCounts[tag]}</span>
+            <span className="text-xs font-medium" style={{ color: TAG_DEFAULT_COLORS[tag] ?? '#64748b' }}>
+              {tag}: <span className="font-semibold">{tagCounts[tag]}</span>
             </span>
           </div>
         ))}

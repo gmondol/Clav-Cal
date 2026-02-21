@@ -34,7 +34,7 @@ export default function CalendarNav() {
       >
         <button
           onClick={() => navigate(-1)}
-          className="p-1.5 rounded-lg transition-all text-muted hover:text-foreground active:shadow-[inset_2px_2px_4px_rgba(0,0,0,0.1),inset_-2px_-2px_4px_rgba(255,255,255,0.7)]"
+          className="p-1.5 rounded-lg transition-all text-blue-500 hover:text-blue-600 active:shadow-[inset_2px_2px_4px_rgba(0,0,0,0.1),inset_-2px_-2px_4px_rgba(255,255,255,0.7)]"
           style={{
             boxShadow: '2px 2px 5px rgba(0,0,0,0.07), -2px -2px 5px rgba(255,255,255,0.8)',
           }}
@@ -46,7 +46,7 @@ export default function CalendarNav() {
         <h2 className="text-sm font-semibold text-foreground px-2">{getTitle()}</h2>
         <button
           onClick={() => navigate(1)}
-          className="p-1.5 rounded-lg transition-all text-muted hover:text-foreground active:shadow-[inset_2px_2px_4px_rgba(0,0,0,0.1),inset_-2px_-2px_4px_rgba(255,255,255,0.7)]"
+          className="p-1.5 rounded-lg transition-all text-blue-500 hover:text-blue-600 active:shadow-[inset_2px_2px_4px_rgba(0,0,0,0.1),inset_-2px_-2px_4px_rgba(255,255,255,0.7)]"
           style={{
             boxShadow: '2px 2px 5px rgba(0,0,0,0.07), -2px -2px 5px rgba(255,255,255,0.8)',
           }}
@@ -57,14 +57,22 @@ export default function CalendarNav() {
         </button>
       </div>
 
-      <div className="flex bg-zinc-100 rounded-lg p-0.5">
+      <div className="relative flex bg-zinc-100 rounded-lg p-0.5">
+        <div
+          className="absolute top-0.5 bottom-0.5 rounded-md bg-blue-500 shadow-sm transition-transform duration-300 ease-in-out"
+          style={{
+            width: 'calc(50% - 2px)',
+            left: '2px',
+            transform: currentView === 'week' ? 'translateX(calc(100% + 2px))' : 'translateX(0)',
+          }}
+        />
         {(['month', 'week'] as CalendarView[]).map((v) => (
           <button
             key={v}
             onClick={() => setCurrentView(v)}
-            className={`px-3 py-1 text-xs font-medium rounded-md transition-all ${
+            className={`relative z-10 px-3 py-1 text-xs font-medium rounded-md transition-colors duration-300 ${
               currentView === v
-                ? 'bg-blue-500 text-white shadow-sm'
+                ? 'text-white'
                 : 'text-muted hover:text-foreground'
             }`}
           >

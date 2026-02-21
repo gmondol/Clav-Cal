@@ -64,6 +64,48 @@ body {
   animation: scaleIn 0.2s ease-out;
 }
 
+.neu-panel {
+  background: #f0f0f3;
+  border-radius: 16px;
+  box-shadow:
+    6px 6px 14px rgba(0, 0, 0, 0.08),
+    -6px -6px 14px rgba(255, 255, 255, 0.9);
+  border: none;
+}
+
+.neu-panel-inset {
+  background: #e8e8eb;
+  border-radius: 16px;
+  box-shadow:
+    inset 4px 4px 10px rgba(0, 0, 0, 0.08),
+    inset -4px -4px 10px rgba(255, 255, 255, 0.7);
+  border: none;
+}
+
+.neu-card {
+  background: #f0f0f3;
+  border-radius: 12px;
+  box-shadow:
+    3px 3px 8px rgba(0, 0, 0, 0.07),
+    -3px -3px 8px rgba(255, 255, 255, 0.85);
+  transition: all 0.2s ease;
+}
+
+.neu-card:hover {
+  box-shadow:
+    1px 1px 4px rgba(0, 0, 0, 0.06),
+    -1px -1px 4px rgba(255, 255, 255, 0.7);
+}
+
+.neu-inset {
+  background: #e8e8eb;
+  border-radius: 10px;
+  box-shadow:
+    inset 2px 2px 5px rgba(0, 0, 0, 0.08),
+    inset -2px -2px 5px rgba(255, 255, 255, 0.7);
+  border: none;
+}
+
 .conflict-indicator {
   position: relative;
 }

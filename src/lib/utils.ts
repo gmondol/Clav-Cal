@@ -57,6 +57,50 @@ export function getConflictingEvents(events: CalendarEvent[]): Set<string> {
   return conflicts;
 }
 
+export function generateDailySummary(events: CalendarEvent[], date: string): string {
+  const dayEvents = events.filter((e) => e.date === date).sort((a, b) => timeToMinutes(a.startTime) - timeToMinutes(b.startTime));
+  if (dayEvents.length === 0) return 'No events scheduled this day.';
+  const d = parse(date, 'yyyy-MM-dd', new Date());
+  const lines: string[] = [`📅 ${format(d, 'EEEE, MMMM d, yyyy')}`, ''];
+  dayEvents.forEach((e) => {
+    lines.push(`${formatTimeDisplay(e.startTime)} – ${formatTimeDisplay(e.endTime)}: ${e.title}`);
+    if (e.address) lines.push(`  📍 ${e.address}`);
+    if (e.contact) lines.push(`  👤 ${e.contact}`);
+    if (e.tags.length) lines.push(`  📌 ${e.tags.join(', ')}`);
+  });
+  return lines.join('\n');
+}
+
+export function generateMonthlySummary(events: CalendarEvent[], monthStart: string, monthEnd: string): string {
+  const monthEvents = events.filter((e) => e.date >= monthStart && e.date <= monthEnd);
+  if (monthEvents.length === 0) return 'No events scheduled this month.';
+  const byDate = new Map<string, CalendarEvent[]>();
+  monthEvents.forEach((e) => {
+    const list = byDate.get(e.date) || [];
+    list.push(e);
+    byDate.set(e.date, list);
+  });
+  const sortedDates = Array.from(byDate.keys()).sort();
+  const lines: string[] = ['📅 Monthly Plan Summary', ''];
+  sortedDates.forEach((date) => {
+    const d = parse(date, 'yyyy-MM-dd', new Date());
+    lines.push(`${format(d, 'EEEE, MMM d')}`);
+    byDate.get(date)!.forEach((e) => {
+      lines.push(`  ${formatTimeDisplay(e.startTime)} – ${formatTimeDisplay(e.endTime)}: ${e.title}`);
+      if (e.address) lines.push(`    📍 ${e.address}`);
+      if (e.contact) lines.push(`    👤 ${e.contact}`);
+    });
+    lines.push('');
+  });
+  const tagCounts = new Map<string, number>();
+  monthEvents.forEach((e) => e.tags.forEach((t) => tagCounts.set(t, (tagCounts.get(t) || 0) + 1)));
+  if (tagCounts.size > 0) {
+    lines.push('📊 Summary');
+    tagCounts.forEach((count, tag) => lines.push(`  ${tag}: ${count}`));
+  }
+  return lines.join('\n');
+}
+
 export function generateWeeklySummary(events: CalendarEvent[], weekStart: string, weekEnd: string): string {
   const weekEvents = events.filter((e) => e.date >= weekStart && e.date <= weekEnd);
   if (weekEvents.length === 0) return 'No events scheduled this week.';

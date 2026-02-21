@@ -109,14 +109,18 @@ export default function Home() {
     reorderNotes,
     reorderEventsInDay,
     addEvent,
+    updateEvent,
+    deleteEvent,
     deleteNote,
     loadFromSupabase,
     loaded,
   } = useStore();
   const notes = useStore((s) => s.notes);
+  const allEvents = useStore((s) => s.events);
 
   const [activeDrag, setActiveDrag] = useState<DragItem | null>(null);
   const [dayViewDate, setDayViewDate] = useState<string | null>(null);
+  const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null);
   const [showExport, setShowExport] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [showNewForm, setShowNewForm] = useState(false);
@@ -215,6 +219,23 @@ export default function Home() {
     setDayViewDate(event.date);
   }, []);
 
+  const handleEventSave = useCallback(
+    (data: Omit<CalendarEvent, 'id'>) => {
+      if (editingEvent) {
+        updateEvent(editingEvent.id, data);
+        setEditingEvent(null);
+      }
+    },
+    [editingEvent, updateEvent]
+  );
+
+  const handleEventDelete = useCallback(() => {
+    if (editingEvent) {
+      deleteEvent(editingEvent.id);
+      setEditingEvent(null);
+    }
+  }, [editingEvent, deleteEvent]);
+
   if (!mounted) {
     return (
       <div className="h-screen flex items-center justify-center bg-background">
@@ -276,6 +297,20 @@ export default function Home() {
 
       {(!hasSeenOnboarding || showOnboarding) && <Onboarding onClose={() => setShowOnboarding(false)} />}
       {dayViewDate && <DayView date={dayViewDate} onClose={() => setDayViewDate(null)} />}
+      {editingEvent && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm animate-fade-in" onClick={() => setEditingEvent(null)}>
+          <div className="w-full max-w-lg animate-scale-in" onClick={(e) => e.stopPropagation()}>
+            <EventEditor
+              event={editingEvent}
+              date={editingEvent.date}
+              existingEvents={allEvents.filter((e) => e.date === editingEvent.date)}
+              onSave={handleEventSave}
+              onDelete={handleEventDelete}
+              onCancel={() => setEditingEvent(null)}
+            />
+          </div>
+        </div>
+      )}
       {showExport && <ExportModal onClose={() => setShowExport(false)} />}
 
       {pendingDrop && (
@@ -284,6 +319,7 @@ export default function Home() {
             <EventEditor
               date={pendingDrop.date}
               defaultStartTime="10:00"
+              existingEvents={allEvents.filter((e) => e.date === pendingDrop.date)}
               onSave={handlePendingDropSave}
               onCancel={() => setPendingDrop(null)}
               event={{

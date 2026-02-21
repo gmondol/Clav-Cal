@@ -80,7 +80,7 @@ function WeekEventBlock({
     >
       <div className="px-1.5 py-1 h-full flex flex-col">
         <span
-          className="text-[10px] font-semibold leading-tight truncate"
+          className="text-[20px] font-semibold leading-tight truncate"
           style={{ color: event.color }}
         >
           {event.title}

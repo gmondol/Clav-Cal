@@ -1,12 +1,11 @@
 export type Complexity = 'low' | 'medium' | 'high';
 export type CalendarView = 'month' | 'week';
-export type NoteStatus = 'idea' | 'workshop' | 'ready' | 'scheduled';
+export type NoteStatus = 'idea' | 'workshop' | 'ready';
 
 export const NOTE_STATUSES: { value: NoteStatus; label: string; emoji: string; color: string }[] = [
   { value: 'idea', label: 'Idea', emoji: '💡', color: '#f59e0b' },
-  { value: 'workshop', label: 'Workshop', emoji: '🔧', color: '#8b5cf6' },
-  { value: 'ready', label: 'Ready', emoji: '✅', color: '#10b981' },
-  { value: 'scheduled', label: 'Scheduled', emoji: '📅', color: '#3b82f6' },
+  { value: 'ready', label: 'Approved', emoji: '✅', color: '#10b981' },
+  { value: 'workshop', label: 'Potential Collabs', emoji: '🤝', color: '#8b5cf6' },
 ];
 
 export const PRESET_TAGS = [
@@ -17,6 +16,22 @@ export const PRESET_TAGS = [
 ] as const;
 
 export type PresetTag = (typeof PRESET_TAGS)[number];
+
+export interface CollabProfile {
+  name: string;
+  profilePicUrl?: string;
+  twitchUrl?: string;
+  twitchFollowers?: string;
+  kickUrl?: string;
+  kickFollowers?: string;
+  igUrl?: string;
+  igFollowers?: string;
+  twitterUrl?: string;
+  twitterFollowers?: string;
+  tiktokUrl?: string;
+  tiktokFollowers?: string;
+  notes?: string;
+}
 
 export interface ScratchNote {
   id: string;
@@ -29,6 +44,9 @@ export interface ScratchNote {
   keepInScratch?: boolean;
   complexity?: Complexity;
   status?: NoteStatus;
+  collabProfiles?: CollabProfile[];
+  address?: string;
+  attachments?: string[];
 }
 
 export interface CalendarEvent {
@@ -54,8 +72,10 @@ export const COLOR_PALETTE = [
   { name: 'Orange', value: '#f97316', bg: '#fff7ed', border: '#fed7aa' },
   { name: 'Amber', value: '#f59e0b', bg: '#fffbeb', border: '#fde68a' },
   { name: 'Emerald', value: '#10b981', bg: '#ecfdf5', border: '#a7f3d0' },
+  { name: 'Teal', value: '#14b8a6', bg: '#f0fdfa', border: '#99f6e4' },
   { name: 'Cyan', value: '#06b6d4', bg: '#ecfeff', border: '#a5f3fc' },
   { name: 'Blue', value: '#3b82f6', bg: '#eff6ff', border: '#bfdbfe' },
+  { name: 'Indigo', value: '#6366f1', bg: '#eef2ff', border: '#c7d2fe' },
   { name: 'Violet', value: '#8b5cf6', bg: '#f5f3ff', border: '#ddd6fe' },
   { name: 'Pink', value: '#ec4899', bg: '#fdf2f8', border: '#fbcfe8' },
 ] as const;
