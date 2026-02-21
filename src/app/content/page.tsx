@@ -54,7 +54,7 @@ function ContentColumn({
     <div className="flex-1 flex flex-col min-w-0">
       <div className="flex items-center gap-2 mb-3 px-1">
         <span className="text-base">{NOTE_STATUSES.find((s) => s.value === status)?.emoji}</span>
-        <h2 className="text-sm font-bold text-foreground">{NOTE_STATUSES.find((s) => s.value === status)?.label}</h2>
+        <h2 className="text-sm font-black text-foreground uppercase tracking-widest">{NOTE_STATUSES.find((s) => s.value === status)?.label}</h2>
         <span className="text-[10px] font-semibold text-white bg-blue-500 rounded-full px-1.5 py-0.5">
           {colNotes.length}
         </span>
@@ -1217,7 +1217,7 @@ export default function ContentPage() {
         <div className="flex-1 flex flex-col min-w-0">
           <div className="flex items-center gap-2 mb-3 px-1">
             <span className="text-base">📋</span>
-            <h2 className="text-sm font-bold text-foreground">Used</h2>
+            <h2 className="text-sm font-black text-foreground uppercase tracking-widest">Used</h2>
             <span className="text-[10px] font-semibold text-white bg-blue-500 rounded-full px-1.5 py-0.5">
               {getNotesForStatus('used').length}
             </span>
