@@ -179,7 +179,6 @@ function MasterTodoPanel({
                       placeholder="Name..."
                       className="w-full text-[11px] bg-white border border-zinc-200 rounded px-2 py-1 outline-none focus:border-amber-400"
                     />
-                    </div>
                   </div>
                 )}
               </div>
@@ -427,11 +426,13 @@ function ItemCard({
   onOpen,
   onDelete,
   onRename,
+  isDropTarget = false,
 }: {
   item: ProductionItem;
   onOpen: () => void;
   onDelete: () => void;
   onRename: () => void;
+  isDropTarget?: boolean;
 }) {
   const [showMenu, setShowMenu] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -440,7 +441,7 @@ function ItemCard({
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
-    opacity: isDragging ? 0.4 : 1,
+    opacity: isDragging ? 0.3 : 1,
   };
 
   useEffect(() => {
@@ -468,9 +469,20 @@ function ItemCard({
       {...attributes}
       {...listeners}
       onClick={onOpen}
-      className="group bg-white rounded-xl border border-zinc-200 hover:border-zinc-300 hover:shadow-md transition-shadow cursor-grab active:cursor-grabbing relative overflow-hidden h-[180px] flex flex-col"
+      className={`group rounded-xl border relative overflow-hidden h-[180px] flex flex-col transition-all cursor-grab active:cursor-grabbing ${
+        isDropTarget
+          ? 'bg-blue-50 border-blue-400 border-2 shadow-lg scale-[1.03]'
+          : 'bg-white border-zinc-200 hover:border-zinc-300 hover:shadow-md'
+      }`}
     >
       <div className="h-1 w-full flex-shrink-0" style={{ backgroundColor: item.color }} />
+      {isDropTarget && (
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+          <div className="bg-blue-500 text-white text-[11px] font-bold px-3 py-1.5 rounded-full shadow-md">
+            Drop to move inside
+          </div>
+        </div>
+      )}
       <div className="p-4 flex-1 flex flex-col">
         <div className="flex items-start justify-between gap-2">
           <span className="text-2xl">{item.icon}</span>
@@ -582,14 +594,39 @@ export default function ProductionPage() {
     useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 5 } }),
   );
   const [activeId, setActiveId] = useState<string | null>(null);
+  const [overFolderId, setOverFolderId] = useState<string | null>(null);
   const activeItem = activeId ? currentItems.find((i) => i.id === activeId) ?? null : null;
+
+  const handleGridDragOver = useCallback((event: { active: { id: string | number }; over: { id: string | number } | null }) => {
+    const overId = event.over?.id as string | undefined;
+    if (!overId || overId === event.active.id) { setOverFolderId(null); return; }
+    const overItem = currentItems.find((i) => i.id === overId);
+    if (overItem?.itemType === 'folder' && overId !== event.active.id) {
+      setOverFolderId(overId);
+    } else {
+      setOverFolderId(null);
+    }
+  }, [currentItems]);
 
   const handleGridDragEnd = useCallback((event: DragEndEvent) => {
     setActiveId(null);
+    setOverFolderId(null);
     const { active, over } = event;
     if (!over || active.id === over.id) return;
-    const oldIndex = currentItems.findIndex((i) => i.id === active.id);
-    const newIndex = currentItems.findIndex((i) => i.id === over.id);
+
+    const draggedId = active.id as string;
+    const overId = over.id as string;
+    const overItem = currentItems.find((i) => i.id === overId);
+
+    // Drop onto a folder → move item inside it
+    if (overItem?.itemType === 'folder') {
+      updateProductionItem(draggedId, { parentId: overId, sortOrder: 0 });
+      return;
+    }
+
+    // Otherwise reorder
+    const oldIndex = currentItems.findIndex((i) => i.id === draggedId);
+    const newIndex = currentItems.findIndex((i) => i.id === overId);
     if (oldIndex === -1 || newIndex === -1) return;
     const reordered = [...currentItems];
     const [moved] = reordered.splice(oldIndex, 1);
@@ -738,7 +775,7 @@ export default function ProductionPage() {
             )}
             {/* Grid */}
             <div className="flex-1 overflow-auto p-4 md:p-8">
-              <DndContext sensors={dndSensors} collisionDetection={closestCenter} onDragStart={(e) => setActiveId(e.active.id as string)} onDragEnd={handleGridDragEnd} onDragCancel={() => setActiveId(null)}>
+              <DndContext sensors={dndSensors} collisionDetection={closestCenter} onDragStart={(e) => setActiveId(e.active.id as string)} onDragOver={handleGridDragOver} onDragEnd={handleGridDragEnd} onDragCancel={() => { setActiveId(null); setOverFolderId(null); }}>
               <SortableContext items={currentItems.map((i) => i.id)} strategy={rectSortingStrategy}>
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
                 {currentItems.map((item) => (
@@ -765,6 +802,7 @@ export default function ProductionPage() {
                       onOpen={() => handleItemClick(item)}
                       onDelete={() => handleDelete(item.id)}
                       onRename={() => { setRenamingId(item.id); setRenameValue(item.title); }}
+                      isDropTarget={item.itemType === 'folder' && overFolderId === item.id}
                     />
                   )
                 ))}
