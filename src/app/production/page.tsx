@@ -640,71 +640,76 @@ export default function ProductionPage() {
         ) : (
           /* ━━ Folder View ━━ */
           <>
+            {currentFolderId && (
+              <div className="flex items-center gap-2 px-4 md:px-8 py-2.5 bg-white border-b border-zinc-100">
+                <button
+                  onClick={() => {
+                    const parent = productionItems.find((i) => i.id === currentFolderId);
+                    setCurrentFolderId(parent?.parentId ?? null);
+                  }}
+                  className="p-1.5 rounded-lg hover:bg-zinc-100 text-zinc-500 transition-colors"
+                >
+                  <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M19 12H5M12 19l-7-7 7-7" /></svg>
+                </button>
+                <span className="text-sm font-semibold text-zinc-700 truncate">
+                  {productionItems.find((i) => i.id === currentFolderId)?.title ?? 'Folder'}
+                </span>
+              </div>
+            )}
             {/* Grid */}
             <div className="flex-1 overflow-auto p-4 md:p-8">
-              {currentItems.length === 0 ? (
-                <div className="flex flex-col items-center justify-center h-full text-zinc-300">
-                  <div className="text-6xl mb-4">📂</div>
-                  <p className="text-lg font-medium mb-1">
-                    {currentFolderId ? 'This folder is empty' : 'Your Production Hub'}
-                  </p>
-                  <p className="text-sm mb-6">
-                    {currentFolderId ? 'Create something to get started' : 'Create folders, notes, checklists, and more'}
-                  </p>
-                  <div className="relative" ref={newMenuRef}>
-                    <button
-                      onClick={() => setShowNewMenu(!showNewMenu)}
-                      className="px-5 py-2.5 bg-blue-500 text-white rounded-lg text-sm font-semibold hover:bg-blue-600 transition-colors shadow-sm"
-                    >
-                      + Create First Item
-                    </button>
-                    {showNewMenu && (
-                      <div className="absolute left-1/2 -translate-x-1/2 top-full mt-2 bg-white rounded-xl border border-zinc-200 shadow-xl py-2 w-48 z-50">
-                        {(Object.entries(TYPE_META) as [ProductionItemType, { label: string; defaultIcon: string }][]).map(([type, meta]) => (
-                          <button
-                            key={type}
-                            onClick={() => { createItem(type); setShowNewMenu(false); }}
-                            className="w-full text-left px-4 py-2.5 text-sm hover:bg-zinc-50 transition-colors flex items-center gap-3"
-                          >
-                            <span className="text-lg">{meta.defaultIcon}</span>
-                            <span className="font-medium text-zinc-700">{meta.label}</span>
-                          </button>
-                        ))}
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
+                {currentItems.map((item) => (
+                  renamingId === item.id ? (
+                    <div key={item.id} className="bg-white rounded-xl border-2 border-blue-400 overflow-hidden">
+                      <div className="h-1 w-full" style={{ backgroundColor: item.color }} />
+                      <div className="p-4">
+                        <span className="text-2xl">{item.icon}</span>
+                        <input
+                          autoFocus
+                          value={renameValue}
+                          onChange={(e) => setRenameValue(e.target.value)}
+                          onBlur={handleRenameSubmit}
+                          onKeyDown={(e) => { if (e.key === 'Enter') handleRenameSubmit(); if (e.key === 'Escape') { setRenamingId(null); setRenameValue(''); } }}
+                          className="w-full text-sm font-semibold mt-3 bg-transparent outline-none border-b border-blue-400 pb-1 text-zinc-800"
+                        />
+                        <p className="text-[11px] text-zinc-400 mt-1">{TYPE_META[item.itemType].label}</p>
                       </div>
-                    )}
-                  </div>
+                    </div>
+                  ) : (
+                    <ItemCard
+                      key={item.id}
+                      item={item}
+                      onOpen={() => handleItemClick(item)}
+                      onDelete={() => handleDelete(item.id)}
+                      onRename={() => { setRenamingId(item.id); setRenameValue(item.title); }}
+                    />
+                  )
+                ))}
+                <div className="relative" ref={newMenuRef}>
+                  <button
+                    onClick={() => setShowNewMenu(!showNewMenu)}
+                    className="w-full h-full min-h-[120px] flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-zinc-300 text-zinc-400 hover:border-blue-400 hover:text-blue-500 hover:bg-blue-50/50 transition-colors"
+                  >
+                    <svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" /></svg>
+                    <span className="text-xs font-semibold">New</span>
+                  </button>
+                  {showNewMenu && (
+                    <div className="absolute left-0 top-full mt-2 bg-white rounded-xl border border-zinc-200 shadow-xl py-2 w-48 z-50">
+                      {(Object.entries(TYPE_META) as [ProductionItemType, { label: string; defaultIcon: string }][]).map(([type, meta]) => (
+                        <button
+                          key={type}
+                          onClick={() => { createItem(type); setShowNewMenu(false); }}
+                          className="w-full text-left px-4 py-2.5 text-sm hover:bg-zinc-50 transition-colors flex items-center gap-3"
+                        >
+                          <span className="text-lg">{meta.defaultIcon}</span>
+                          <span className="font-medium text-zinc-700">{meta.label}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
-              ) : (
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
-                  {currentItems.map((item) => (
-                    renamingId === item.id ? (
-                      <div key={item.id} className="bg-white rounded-xl border-2 border-blue-400 overflow-hidden">
-                        <div className="h-1 w-full" style={{ backgroundColor: item.color }} />
-                        <div className="p-4">
-                          <span className="text-2xl">{item.icon}</span>
-                          <input
-                            autoFocus
-                            value={renameValue}
-                            onChange={(e) => setRenameValue(e.target.value)}
-                            onBlur={handleRenameSubmit}
-                            onKeyDown={(e) => { if (e.key === 'Enter') handleRenameSubmit(); if (e.key === 'Escape') { setRenamingId(null); setRenameValue(''); } }}
-                            className="w-full text-sm font-semibold mt-3 bg-transparent outline-none border-b border-blue-400 pb-1 text-zinc-800"
-                          />
-                          <p className="text-[11px] text-zinc-400 mt-1">{TYPE_META[item.itemType].label}</p>
-                        </div>
-                      </div>
-                    ) : (
-                      <ItemCard
-                        key={item.id}
-                        item={item}
-                        onOpen={() => handleItemClick(item)}
-                        onDelete={() => handleDelete(item.id)}
-                        onRename={() => { setRenamingId(item.id); setRenameValue(item.title); }}
-                      />
-                    )
-                  ))}
-                </div>
-              )}
+              </div>
             </div>
           </>
         )}
