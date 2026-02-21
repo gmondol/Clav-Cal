@@ -1333,7 +1333,7 @@ export default function ContentPage() {
         </div>
       </div>
 
-      {(showNewForm || editingNote) && (newFormStatus === 'workshop' || (editingNote?.status === 'workshop' && (editingNote?.collabProfiles?.length ?? 0) > 0)) ? (
+      {(showNewForm || editingNote) && ((showNewForm && !editingNote && newFormStatus === 'workshop') || (editingNote?.status === 'workshop' && (editingNote?.collabProfiles?.length ?? 0) > 0)) ? (
         <CollabEditor
           note={editingNote ?? undefined}
           onSave={handleSave as (data: Partial<ScratchNote> & { title: string; color: string; collabProfiles: CollabProfile[] }) => void}
