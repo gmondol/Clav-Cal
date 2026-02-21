@@ -54,7 +54,7 @@ function ContentColumn({
       <div className="flex items-center gap-2 mb-3 px-1">
         <span className="text-base">{NOTE_STATUSES.find((s) => s.value === status)?.emoji}</span>
         <h2 className="text-sm font-bold text-foreground">{NOTE_STATUSES.find((s) => s.value === status)?.label}</h2>
-        <span className="text-[10px] font-semibold text-muted neu-inset rounded-full px-1.5 py-0.5">
+        <span className="text-[10px] font-semibold text-white bg-blue-500 rounded-full px-1.5 py-0.5">
           {colNotes.length}
         </span>
       </div>
@@ -96,6 +96,7 @@ function ContentCard({
   onDelete: () => void;
 }) {
   const [showMove, setShowMove] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: note.id,
     data: { type: 'content-note', note },
@@ -151,7 +152,7 @@ function ContentCard({
             </button>
           )}
           <button
-            onClick={onDelete}
+            onClick={() => setShowDeleteConfirm(true)}
             className="p-1 rounded hover:bg-red-50 text-zinc-400 hover:text-red-500 transition-colors"
             title="Delete"
           >
@@ -161,6 +162,32 @@ function ContentCard({
           </button>
         </div>
       </div>
+      {showDeleteConfirm && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm animate-fade-in"
+          onClick={(e) => { e.stopPropagation(); setShowDeleteConfirm(false); }}
+          onPointerDown={(e) => e.stopPropagation()}
+        >
+          <div className="bg-white rounded-xl shadow-2xl p-5 max-w-xs w-full animate-scale-in" onClick={(e) => e.stopPropagation()}>
+            <h4 className="text-sm font-bold text-foreground mb-1">Delete this idea?</h4>
+            <p className="text-[11px] text-muted mb-4">"{note.title}" will be permanently deleted. This can't be undone.</p>
+            <div className="flex gap-2">
+              <button
+                onClick={() => { onDelete(); setShowDeleteConfirm(false); }}
+                className="flex-1 py-2 text-xs font-semibold bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
+              >
+                Delete
+              </button>
+              <button
+                onClick={() => setShowDeleteConfirm(false)}
+                className="flex-1 py-2 text-xs font-semibold text-muted bg-zinc-100 rounded-lg hover:bg-zinc-200 transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       {(note.description || (note.collabProfiles && note.collabProfiles.some((p) => p.igUrl || p.twitterUrl || p.tiktokUrl))) && (
         <div className="text-[11px] text-zinc-500 mb-2 space-y-1">
           {note.description && <p className="line-clamp-2">{note.description}</p>}
@@ -292,7 +319,7 @@ function NoteEditor({
                   style={
                     isActive
                       ? { backgroundColor: tagColor, color: '#fff', boxShadow: `0 0 0 1px ${tagColor}` }
-                      : { backgroundColor: tagColor + '15', color: tagColor, opacity: 0.45 }
+                      : { backgroundColor: tagColor + '18', color: tagColor, opacity: tags.length > 0 ? 0.4 : 1 }
                   }
                 >
                   {tag}
@@ -545,7 +572,7 @@ function CollabEditor({
     const displayTitle = title.trim() || (valid.length === 1 ? valid[0].name : `Collab: ${valid.map((p) => p.name).join(', ')}`);
     const payload: Parameters<typeof onSave>[0] = {
       title: displayTitle,
-      color,
+      color: TAG_DEFAULT_COLORS['Collab'] || color,
       tags: ['Collab'],
       description: notes.trim() || undefined,
       collabProfiles: valid,
@@ -864,7 +891,7 @@ export default function ContentPage() {
         ))}
 
         <div className="flex-1 flex flex-col min-w-0">
-          <div className="flex-1 flex flex-col rounded-2xl overflow-hidden bg-white border border-border-light">
+          <div className="flex-1 flex flex-col rounded-2xl overflow-hidden bg-white border-2 border-blue-400">
             <div className="flex items-center gap-2 px-3 py-2 border-b border-border-light flex-shrink-0">
               <span className="text-lg">🧠</span>
               <div>
@@ -892,7 +919,7 @@ export default function ContentPage() {
                       <button
                         key={q}
                         onClick={() => { setChatInput(q); }}
-                        className="text-[10px] px-2 py-1 rounded-lg text-foreground hover:text-blue-600 bg-zinc-100 hover:bg-zinc-200 transition-colors"
+                        className="text-[10px] px-2 py-1 rounded-lg text-white bg-blue-400 hover:bg-blue-500 transition-colors"
                       >
                         {q}
                       </button>

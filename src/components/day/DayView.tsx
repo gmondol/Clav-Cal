@@ -43,6 +43,13 @@ function DayEventBlock({
   const topOffset = startMin - 6 * 60;
   const height = Math.max(duration, 20);
 
+  const hexToRgba = (hex: string, alpha: number) => {
+    const r = parseInt(hex.slice(1, 3), 16);
+    const g = parseInt(hex.slice(3, 5), 16);
+    const b = parseInt(hex.slice(5, 7), 16);
+    return `rgba(${Math.round(r + (255 - r) * (1 - alpha))}, ${Math.round(g + (255 - g) * (1 - alpha))}, ${Math.round(b + (255 - b) * (1 - alpha))}, 1)`;
+  };
+
   const mergedStyle: React.CSSProperties = {
     transform: CSS.Transform.toString(transform) ?? undefined,
     transition: transition ?? undefined,
@@ -50,7 +57,7 @@ function DayEventBlock({
     top: `${(topOffset / 30) * 40}px`,
     height: `${(height / 30) * 40}px`,
     minHeight: '32px',
-    backgroundColor: '#ffffff',
+    backgroundColor: event.confirmed ? hexToRgba(event.color || '#000000', 0.08) : '#ffffff',
     border: `1px solid ${event.color}`,
     borderLeftWidth: event.confirmed ? 6 : 3,
   };

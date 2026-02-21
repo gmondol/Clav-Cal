@@ -26,10 +26,10 @@ export default function EventChip({ event, hasConflict, compact, scaled, onClick
     transform: CSS.Transform.toString(transform) ?? undefined,
     transition: transition ?? undefined,
     opacity: isDragging ? 0.4 : 1,
-    backgroundColor: event.confirmed ? event.color + '18' : 'transparent',
-    color: event.color,
+    backgroundColor: event.confirmed ? event.color : '#ffffff',
+    color: event.confirmed ? '#ffffff' : event.color,
     border: `1px solid ${event.color}`,
-    borderLeftWidth: 3,
+    borderLeftWidth: event.confirmed ? 1 : 3,
     height: scaledHeight ? `${scaledHeight}px` : undefined,
     minHeight: scaledHeight ? `${scaledHeight}px` : undefined,
   };
