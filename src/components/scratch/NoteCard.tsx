@@ -3,7 +3,6 @@
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { ScratchNote, TAG_DEFAULT_COLORS } from '@/lib/types';
-import TagBadge from '@/components/ui/TagBadge';
 
 interface NoteCardProps {
   note: ScratchNote;
@@ -72,16 +71,13 @@ export default function NoteCard({ note, onEdit, onArchive, onDelete }: NoteCard
         {note.description && (
           <p className="text-[10px] text-muted mb-1.5 line-clamp-2">{note.description}</p>
         )}
-        <div className="flex items-center gap-1 flex-wrap">
-          {note.tags.map((tag) => (
-            <TagBadge key={tag} tag={tag} color={TAG_DEFAULT_COLORS[tag]} />
-          ))}
-          {note.keepInScratch && (
+        {note.keepInScratch && (
+          <div className="flex items-center gap-1 flex-wrap">
             <span className="text-[9px] px-1 py-0.5 rounded bg-blue-50 text-blue-500 font-medium">
               Template
             </span>
-          )}
-        </div>
+          </div>
+        )}
       </div>
     </div>
   );

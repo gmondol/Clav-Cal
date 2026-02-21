@@ -416,25 +416,25 @@ export default function NoteEditor({
           )}
         </div>
 
-        {note && (
+        <textarea
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          placeholder={isApproved ? "📝 Flesh it out... notes, format ideas, guest list, equipment needed, talking points..." : "📝 Describe the idea..."}
+          rows={3}
+          className="w-full text-xs bg-zinc-50 rounded-md border border-border-light p-2 outline-none resize-none placeholder:text-zinc-300 focus:border-primary/30"
+        />
+
+        {isApproved && (
           <textarea
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            placeholder="📝 Flesh it out... notes, format ideas, guest list, equipment needed, talking points..."
-            rows={3}
+            value={address}
+            onChange={(e) => setAddress(e.target.value)}
+            placeholder="📍 Address (optional)"
+            rows={2}
             className="w-full text-xs bg-zinc-50 rounded-md border border-border-light p-2 outline-none resize-none placeholder:text-zinc-300 focus:border-primary/30"
           />
         )}
 
-        <textarea
-          value={address}
-          onChange={(e) => setAddress(e.target.value)}
-          placeholder="📍 Address (optional)"
-          rows={2}
-          className="w-full text-xs bg-zinc-50 rounded-md border border-border-light p-2 outline-none resize-none placeholder:text-zinc-300 focus:border-primary/30"
-        />
-
-        {!showContact && contactName.trim() && (
+        {isApproved && !showContact && contactName.trim() && (
           <button
             type="button"
             onClick={() => setShowContact(true)}
@@ -456,30 +456,32 @@ export default function NoteEditor({
           </button>
         )}
 
-        <div className="flex gap-2">
-          {!showContact && !contactName.trim() && (
+        {isApproved && (
+          <div className="flex gap-2">
+            {!showContact && !contactName.trim() && (
+              <button
+                type="button"
+                onClick={() => setShowContact(true)}
+                className="flex-1 flex items-center justify-center gap-1.5 text-xs text-blue-500 hover:text-blue-600 py-2 border border-dashed border-blue-400 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors"
+              >
+                <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                  <circle cx="12" cy="7" r="4" /><path d="M5.5 21v-2a6 6 0 0113 0v2" /><path d="M20 8v6M23 11h-6" />
+                </svg>
+                Add Point of Contact
+              </button>
+            )}
             <button
               type="button"
-              onClick={() => setShowContact(true)}
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploading}
               className="flex-1 flex items-center justify-center gap-1.5 text-xs text-blue-500 hover:text-blue-600 py-2 border border-dashed border-blue-400 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors"
             >
-              <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                <circle cx="12" cy="7" r="4" /><path d="M5.5 21v-2a6 6 0 0113 0v2" /><path d="M20 8v6M23 11h-6" />
-              </svg>
-              Add Point of Contact
+              {uploading ? '...' : '📎'} Add Attachment
             </button>
-          )}
-          <button
-            type="button"
-            onClick={() => fileInputRef.current?.click()}
-            disabled={uploading}
-            className="flex-1 flex items-center justify-center gap-1.5 text-xs text-blue-500 hover:text-blue-600 py-2 border border-dashed border-blue-400 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors"
-          >
-            {uploading ? '...' : '📎'} Add Attachment
-          </button>
-        </div>
+          </div>
+        )}
 
-        {showContact && (
+        {isApproved && showContact && (
           <div className="space-y-2 p-3 rounded-lg border border-zinc-200 bg-white">
             <div className="flex items-center justify-between">
               <p className="text-[10px] font-semibold text-zinc-500 uppercase tracking-wide">👤 Point of Contact</p>

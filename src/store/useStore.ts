@@ -284,7 +284,7 @@ export const useStore = create<StoreState>()(
     contacts: [],
     productionItems: [],
     usedNoteIds: [],
-    customTags: (() => { try { return JSON.parse(localStorage.getItem('clav-custom-tags') || '[]'); } catch { return []; } })(),
+    customTags: [],
     hasSeenOnboarding: true,
     loaded: false,
 
@@ -295,26 +295,29 @@ export const useStore = create<StoreState>()(
     addCustomTag: (tag) => {
       const next = [...get().customTags.filter((t) => t.name !== tag.name), tag];
       set({ customTags: next });
-      localStorage.setItem('clav-custom-tags', JSON.stringify(next));
+      supabase.from('custom_tags').upsert({ name: tag.name, color: tag.color }).then((r) => sbLog('upsert custom_tag', r));
     },
     removeCustomTag: (name) => {
       const next = get().customTags.filter((t) => t.name !== name);
       set({ customTags: next });
-      localStorage.setItem('clav-custom-tags', JSON.stringify(next));
+      supabase.from('custom_tags').delete().eq('name', name).then((r) => sbLog('delete custom_tag', r));
     },
 
     loadFromSupabase: async () => {
-      const [notesRes, eventsRes, contactsRes, itemsRes] = await Promise.all([
+      const [notesRes, eventsRes, contactsRes, itemsRes, tagsRes] = await Promise.all([
         supabase.from('notes').select('*').order('sort_order', { ascending: true }),
         supabase.from('events').select('*'),
         supabase.from('contacts').select('*').order('created_at', { ascending: false }),
         supabase.from('production_items').select('*').order('sort_order', { ascending: true }),
+        supabase.from('custom_tags').select('*'),
       ]);
       const notes = (notesRes.data ?? []).map(rowToNote);
       const events = (eventsRes.data ?? []).map(rowToEvent);
       const contacts = (contactsRes.data ?? []).map(rowToContact);
       const productionItems = (itemsRes.data ?? []).map(rowToItem);
+      const customTags: CustomTag[] = (tagsRes.data ?? []).map((r: Record<string, unknown>) => ({ name: r.name as string, color: r.color as string }));
       if (itemsRes.error) console.warn('[Supabase production_items]', itemsRes.error.message, '— run the production_items migration SQL');
+      if (tagsRes.error) console.warn('[Supabase custom_tags]', tagsRes.error.message, '— run the custom_tags migration SQL');
       const calendarState: Record<string, unknown> = {};
       try {
         const savedView = localStorage.getItem('clav-calendar-view');
@@ -322,7 +325,7 @@ export const useStore = create<StoreState>()(
         const savedDate = localStorage.getItem('clav-calendar-date');
         if (savedDate) calendarState.selectedDate = savedDate;
       } catch { /* SSR or localStorage unavailable */ }
-      set({ notes, events, contacts, productionItems, loaded: true, ...calendarState });
+      set({ notes, events, contacts, productionItems, customTags, loaded: true, ...calendarState });
     },
 
     addNote: (note) => {

@@ -687,7 +687,6 @@ export default function ContentPage() {
         : overData.type === 'content-note' && overData.note ? (overData.note.status ?? 'idea')
         : null;
       if (!targetStatus || activeData.note.status === targetStatus) return;
-      if (targetStatus !== 'ready') return;
       updateNote(activeData.note.id, { status: targetStatus });
     },
     [updateNote]
