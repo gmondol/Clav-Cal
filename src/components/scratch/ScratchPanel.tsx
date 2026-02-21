@@ -52,18 +52,18 @@ export default function ScratchPanel({ searchRef, showFormDefault }: ScratchPane
   return (
     <div className="flex flex-col h-full bg-surface border-l border-border">
       <div className="p-3 border-b border-border space-y-2">
+        <h3 className="text-sm font-bold text-foreground uppercase tracking-wider text-center">Content Ideas</h3>
         <div className="flex items-center gap-2">
           <button
             onClick={() => { setEditingNote(null); setShowForm(true); }}
-            className="px-2 py-1 text-[10px] font-semibold rounded-md bg-white text-black border border-border hover:bg-zinc-50 transition-colors"
+            className="px-2.5 py-1.5 text-xs font-semibold rounded-md bg-white text-black border border-border hover:bg-zinc-50 transition-colors"
           >
             + New
           </button>
-          <h3 className="text-sm font-bold text-foreground">Content Ideas</h3>
           <div className="flex-1" />
           <a
             href="/content"
-            className="px-2 py-1 text-[10px] font-semibold rounded-md bg-blue-500 text-white hover:bg-blue-600 transition-colors"
+            className="px-2.5 py-1.5 text-xs font-semibold rounded-md bg-blue-500 text-white hover:bg-blue-600 transition-colors"
           >
             Content Page →
           </a>
@@ -92,7 +92,7 @@ export default function ScratchPanel({ searchRef, showFormDefault }: ScratchPane
         </div>
 
         <div className="flex items-center gap-1.5 flex-wrap">
-          <span className="text-[9px] text-muted font-semibold uppercase">Filter:</span>
+          <span className="text-[10px] text-muted font-semibold uppercase">Filter:</span>
           {PRESET_TAGS.map((tag) => {
             const tagColor = TAG_DEFAULT_COLORS[tag];
             const isActive = filterTag === tag;
@@ -100,7 +100,7 @@ export default function ScratchPanel({ searchRef, showFormDefault }: ScratchPane
               <button
                 key={tag}
                 onClick={() => setFilterTag(isActive ? null : tag)}
-                className={`text-[9px] px-1.5 py-0.5 rounded-full font-medium transition-all ${
+                className={`text-[10px] px-2 py-0.5 rounded-full font-medium transition-all ${
                   isActive ? 'ring-1 ring-offset-1' : 'border hover:opacity-80'
                 }`}
                 style={
@@ -115,7 +115,7 @@ export default function ScratchPanel({ searchRef, showFormDefault }: ScratchPane
           })}
           <button
             onClick={() => setShowAddTag(!showAddTag)}
-            className="text-[9px] px-1.5 py-0.5 rounded-full border border-dashed border-zinc-300 text-zinc-400 hover:border-zinc-400 hover:text-zinc-600 transition-colors font-medium"
+            className="text-[10px] px-2 py-0.5 rounded-full border border-dashed border-zinc-300 text-zinc-400 hover:border-zinc-400 hover:text-zinc-600 transition-colors font-medium"
           >
             + Add Tag
           </button>

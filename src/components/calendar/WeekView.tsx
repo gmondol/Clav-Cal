@@ -20,7 +20,7 @@ import {
   generateTimeSlots,
   timeToMinutes,
 } from '@/lib/utils';
-import { CalendarEvent } from '@/lib/types';
+import { CalendarEvent, TAG_DEFAULT_COLORS } from '@/lib/types';
 import TagBadge from '@/components/ui/TagBadge';
 
 const SLOT_HEIGHT = 40;
@@ -93,7 +93,7 @@ function WeekEventBlock({
         {duration >= 90 && event.tags.length > 0 && (
           <div className="mt-auto flex gap-0.5 flex-wrap">
             {event.tags.slice(0, 2).map((t) => (
-              <TagBadge key={t} tag={t} />
+              <TagBadge key={t} tag={t} color={TAG_DEFAULT_COLORS[t]} />
             ))}
           </div>
         )}

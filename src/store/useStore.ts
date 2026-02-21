@@ -89,6 +89,7 @@ function eventToRow(event: CalendarEvent) {
     complexity: event.complexity ?? null,
     from_note_id: event.fromNoteId ?? null,
     confirmed: event.confirmed ?? false,
+    attachments: event.attachments ?? [],
   };
 }
 
@@ -107,6 +108,7 @@ function rowToEvent(row: Record<string, unknown>): CalendarEvent {
     complexity: (row.complexity as CalendarEvent['complexity']) ?? undefined,
     fromNoteId: (row.from_note_id as string) ?? undefined,
     confirmed: (row.confirmed as boolean) ?? false,
+    attachments: (row.attachments as string[]) ?? [],
   };
 }
 
@@ -230,6 +232,7 @@ export const useStore = create<StoreState>()(
       if (updates.tags !== undefined) row.tags = updates.tags;
       if (updates.complexity !== undefined) row.complexity = updates.complexity;
       if (updates.confirmed !== undefined) row.confirmed = updates.confirmed;
+      if (updates.attachments !== undefined) row.attachments = updates.attachments;
       if (Object.keys(row).length > 0) {
         supabase.from('events').update(row).eq('id', id).then();
       }

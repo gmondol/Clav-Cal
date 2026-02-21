@@ -25,7 +25,7 @@ export default function CalendarNav() {
   };
 
   return (
-    <div className="flex items-center justify-between mb-2">
+    <div className="flex items-center justify-center gap-3 mb-2">
       <div
         className="flex items-center gap-1 bg-zinc-100 rounded-xl px-1 py-0.5"
         style={{

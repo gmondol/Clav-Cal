@@ -1,9 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { CalendarEvent, PRESET_TAGS, TAG_DEFAULT_COLORS } from '@/lib/types';
 import TagBadge from '@/components/ui/TagBadge';
 import { generateTimeSlots, timeToMinutes } from '@/lib/utils';
+import { supabase } from '@/lib/supabase';
 
 const TIME_OPTIONS = generateTimeSlots(0, 24, 15);
 
@@ -36,7 +37,33 @@ export default function EventEditor({
   const [description, setDescription] = useState(event?.description ?? '');
   const [tags, setTags] = useState<string[]>(event?.tags ?? []);
   const [confirmed, setConfirmed] = useState(event?.confirmed ?? false);
+  const [attachments, setAttachments] = useState<string[]>(event?.attachments ?? []);
+  const [uploading, setUploading] = useState(false);
   const [showTagPicker, setShowTagPicker] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    setUploading(true);
+    const newUrls: string[] = [];
+    for (const file of Array.from(files)) {
+      const ext = file.name.split('.').pop();
+      const path = `event-attachments/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+      const { error } = await supabase.storage.from('attachments').upload(path, file);
+      if (!error) {
+        const { data } = supabase.storage.from('attachments').getPublicUrl(path);
+        newUrls.push(data.publicUrl);
+      }
+    }
+    setAttachments((prev) => [...prev, ...newUrls]);
+    setUploading(false);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const removeAttachment = (url: string) => {
+    setAttachments((prev) => prev.filter((a) => a !== url));
+  };
 
   const toggleTag = (tag: string) => {
     const wasActive = tags.includes(tag);
@@ -68,6 +95,7 @@ export default function EventEditor({
       description: description.trim() || undefined,
       tags,
       confirmed,
+      attachments,
       fromNoteId: event?.fromNoteId,
     });
   };
@@ -95,10 +123,16 @@ export default function EventEditor({
         <button
           type="button"
           onClick={() => setConfirmed(!confirmed)}
-          className="text-base flex-shrink-0 transition-transform hover:scale-110"
+          className="relative flex items-center flex-shrink-0 rounded-full h-7 transition-colors duration-200"
+          style={{ backgroundColor: confirmed ? '#dcfce7' : '#fee2e2', width: '56px', padding: '2px' }}
           title={confirmed ? 'Confirmed — click to unconfirm' : 'Not confirmed — click to confirm'}
         >
-          {confirmed ? '✅' : '❌'}
+          <span className="absolute left-1.5 text-xs">❌</span>
+          <span className="absolute right-1.5 text-xs">✅</span>
+          <div
+            className="w-6 h-6 rounded-full bg-white shadow-md transition-transform duration-200 z-10"
+            style={{ transform: confirmed ? 'translateX(26px)' : 'translateX(0px)' }}
+          />
         </button>
       </div>
 
@@ -192,6 +226,48 @@ export default function EventEditor({
         rows={2}
         className="w-full text-xs bg-zinc-50 rounded-md border border-border-light p-2 outline-none resize-none placeholder:text-zinc-300 focus:border-primary/30"
       />
+
+      <div>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          multiple
+          onChange={handleFileUpload}
+          className="hidden"
+        />
+        <button
+          type="button"
+          onClick={() => fileInputRef.current?.click()}
+          disabled={uploading}
+          className="w-full text-xs bg-zinc-50 rounded-md border border-dashed border-zinc-300 p-2 text-zinc-400 hover:border-zinc-400 hover:text-zinc-600 transition-colors flex items-center justify-center gap-1.5"
+        >
+          <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+            <path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48" />
+          </svg>
+          {uploading ? 'Uploading...' : '📎 Attach Files'}
+        </button>
+        {attachments.length > 0 && (
+          <div className="flex flex-wrap gap-2 mt-2">
+            {attachments.map((url) => (
+              <div key={url} className="relative group">
+                <img
+                  src={url}
+                  alt="Attachment"
+                  className="w-14 h-14 rounded-md object-cover border border-border-light"
+                />
+                <button
+                  type="button"
+                  onClick={() => removeAttachment(url)}
+                  className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white rounded-full text-[8px] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                >
+                  ✕
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
 
       <div className="flex gap-2 pt-1">
         <button

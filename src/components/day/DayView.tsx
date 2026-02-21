@@ -7,7 +7,7 @@ import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { useStore } from '@/store/useStore';
-import { CalendarEvent } from '@/lib/types';
+import { CalendarEvent, TAG_DEFAULT_COLORS } from '@/lib/types';
 import {
   getEventsForDate,
   getConflictingEvents,
@@ -91,7 +91,7 @@ function DayEventBlock({
         )}
         {duration >= 45 && (
           <div className="mt-auto flex items-center gap-1 flex-wrap">
-            {event.tags.map((t) => <TagBadge key={t} tag={t} />)}
+            {event.tags.map((t) => <TagBadge key={t} tag={t} color={TAG_DEFAULT_COLORS[t]} />)}
           </div>
         )}
       </div>
@@ -161,7 +161,7 @@ export default function DayView({ date, onClose }: DayViewProps) {
               onClick={() => { setShowNewForm(true); setEditingEvent(null); }}
               className="px-3 py-1.5 text-xs font-semibold bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors"
             >
-              + Quick Add
+              Add Content
             </button>
             <button
               onClick={onClose}

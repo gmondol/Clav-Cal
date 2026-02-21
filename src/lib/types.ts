@@ -45,6 +45,7 @@ export interface CalendarEvent {
   complexity?: Complexity;
   fromNoteId?: string;
   confirmed?: boolean;
+  attachments?: string[];
 }
 
 
