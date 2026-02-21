@@ -193,7 +193,7 @@ export default function DayView({ date, onClose }: DayViewProps) {
       startTime: '10:00',
       endTime: '11:00',
       title: note.title,
-      color: note.color,
+      color: note.color === '#000000' ? '#6366f1' : (note.color || '#6366f1'),
       address: note.address,
       contact: note.contact,
       description: note.description,
@@ -340,15 +340,20 @@ export default function DayView({ date, onClose }: DayViewProps) {
               )}
               {filteredNotes.map((note) => {
                 const statusInfo = NOTE_STATUSES.find((s) => s.value === (note.status ?? 'idea'));
+                const noteTagColor = note.tags.length > 0 && TAG_DEFAULT_COLORS[note.tags[0]] ? TAG_DEFAULT_COLORS[note.tags[0]] : undefined;
+                const noteDisplayColor = noteTagColor || (note.color === '#000000' ? '#6366f1' : (note.color || '#6366f1'));
                 return (
                   <div
                     key={note.id}
                     className="rounded-lg p-4 transition-all group hover:shadow-sm"
-                    style={{ backgroundColor: note.color + '10', borderLeft: `3px solid ${note.color}` }}
+                    style={{
+                      backgroundColor: noteDisplayColor + '10',
+                      borderLeft: `3px solid ${noteDisplayColor}`,
+                    }}
                   >
                     <div className="flex items-start justify-between gap-1.5">
                       <div className="min-w-0 flex-1">
-                        <h4 className="text-[11px] font-semibold leading-tight truncate" style={{ color: note.color }}>
+                        <h4 className="text-[11px] font-semibold leading-tight truncate" style={{ color: noteDisplayColor }}>
                           {note.title}
                         </h4>
                         {note.description && (

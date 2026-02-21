@@ -18,14 +18,16 @@ export default function NoteCard({ note, onEdit, onArchive, onDelete }: NoteCard
     data: { type: 'scratch-note', note },
   });
 
-  const hasColor = note.color && note.color !== '#000000';
+  const tagColor = note.tags.length > 0 && TAG_DEFAULT_COLORS[note.tags[0]] ? TAG_DEFAULT_COLORS[note.tags[0]] : undefined;
+  const rawColor = note.color === '#000000' ? undefined : note.color;
+  const displayColor = tagColor || rawColor || '#6366f1';
   const mergedStyle: React.CSSProperties = {
     transform: CSS.Transform.toString(transform) ?? undefined,
     transition: transition ?? undefined,
     opacity: isDragging ? 0.4 : 1,
-    backgroundColor: hasColor ? note.color + '18' : '#ffffff',
-    color: note.color,
-    borderLeft: `3px solid ${hasColor ? note.color : '#d4d4d8'}`,
+    backgroundColor: displayColor + '18',
+    color: displayColor,
+    borderLeft: `3px solid ${displayColor}`,
   };
 
   return (
@@ -40,7 +42,7 @@ export default function NoteCard({ note, onEdit, onArchive, onDelete }: NoteCard
     >
       <div className="p-2.5">
         <div className="flex items-start justify-between gap-1 mb-1">
-          <h4 className="text-xs font-semibold leading-tight flex-1" style={{ color: note.color }}>
+          <h4 className="text-xs font-semibold leading-tight flex-1" style={{ color: displayColor }}>
             {note.title}
           </h4>
           <div

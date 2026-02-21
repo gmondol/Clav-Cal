@@ -103,7 +103,8 @@ function ContentCard({
     data: { type: 'content-note', note },
   });
 
-  const displayColor = (note.tags.length > 0 && TAG_DEFAULT_COLORS[note.tags[0]]) ? TAG_DEFAULT_COLORS[note.tags[0]] : (note.color || '#d4d4d8');
+  const rawColor = note.color === '#000000' ? undefined : note.color;
+  const displayColor = (note.tags.length > 0 && TAG_DEFAULT_COLORS[note.tags[0]]) ? TAG_DEFAULT_COLORS[note.tags[0]] : (rawColor || '#6366f1');
 
   return (
     <div
@@ -248,7 +249,7 @@ function NoteEditor({
 }) {
   const [title, setTitle] = useState(note?.title ?? '');
   const [description, setDescription] = useState(note?.description ?? '');
-  const [color, setColor] = useState(note?.color ?? '#000000');
+  const [color, setColor] = useState(note?.color && note.color !== '#000000' ? note.color : '#6366f1');
   const [tags, setTags] = useState<string[]>(note?.tags ?? []);
   const [showTagPicker, setShowTagPicker] = useState(false);
   const [address, setAddress] = useState(note?.address ?? '');
@@ -668,7 +669,7 @@ function SocialLinkToggles({
             className={`w-7 h-7 rounded-lg flex items-center justify-center transition-all ${
               btn.active
                 ? `${btn.color} ring-1 ring-offset-1 ring-current`
-                : 'text-zinc-300 bg-zinc-50 hover:text-zinc-500 hover:bg-zinc-100'
+                : 'text-zinc-400 bg-zinc-100 hover:text-zinc-600 hover:bg-zinc-200'
             }`}
             title={btn.title}
           >
@@ -678,32 +679,32 @@ function SocialLinkToggles({
       </div>
       {openFields.has('twitch') && (
         <div className="flex gap-1.5 animate-fade-in">
-          <input value={profile.twitchUrl ?? ''} onChange={(e) => onUpdate({ twitchUrl: e.target.value || undefined })} placeholder="Twitch URL" className="flex-1 text-[10px] bg-white border border-purple-200 rounded px-2 py-1 outline-none placeholder:text-zinc-300" />
-          <input value={profile.twitchFollowers ?? ''} onChange={(e) => onUpdate({ twitchFollowers: e.target.value || undefined })} placeholder="Followers" className="w-20 text-[10px] bg-white border border-purple-200 rounded px-2 py-1 outline-none placeholder:text-zinc-300 text-right" />
+          <input value={profile.twitchUrl ?? ''} onChange={(e) => onUpdate({ twitchUrl: e.target.value || undefined })} placeholder="Twitch URL" className="flex-1 text-[10px] bg-white border border-purple-200 rounded px-2 py-1 outline-none placeholder:text-zinc-400" />
+          <input value={profile.twitchFollowers ?? ''} onChange={(e) => onUpdate({ twitchFollowers: e.target.value || undefined })} placeholder="Followers" className="w-20 text-[10px] bg-white border border-purple-200 rounded px-2 py-1 outline-none placeholder:text-zinc-400 text-right" />
         </div>
       )}
       {openFields.has('kick') && (
         <div className="flex gap-1.5 animate-fade-in">
-          <input value={profile.kickUrl ?? ''} onChange={(e) => onUpdate({ kickUrl: e.target.value || undefined })} placeholder="Kick URL" className="flex-1 text-[10px] bg-white border border-green-200 rounded px-2 py-1 outline-none placeholder:text-zinc-300" />
-          <input value={profile.kickFollowers ?? ''} onChange={(e) => onUpdate({ kickFollowers: e.target.value || undefined })} placeholder="Followers" className="w-20 text-[10px] bg-white border border-green-200 rounded px-2 py-1 outline-none placeholder:text-zinc-300 text-right" />
+          <input value={profile.kickUrl ?? ''} onChange={(e) => onUpdate({ kickUrl: e.target.value || undefined })} placeholder="Kick URL" className="flex-1 text-[10px] bg-white border border-green-200 rounded px-2 py-1 outline-none placeholder:text-zinc-400" />
+          <input value={profile.kickFollowers ?? ''} onChange={(e) => onUpdate({ kickFollowers: e.target.value || undefined })} placeholder="Followers" className="w-20 text-[10px] bg-white border border-green-200 rounded px-2 py-1 outline-none placeholder:text-zinc-400 text-right" />
         </div>
       )}
       {openFields.has('ig') && (
         <div className="flex gap-1.5 animate-fade-in">
-          <input value={profile.igUrl ?? ''} onChange={(e) => onUpdate({ igUrl: e.target.value || undefined })} placeholder="Instagram URL" className="flex-1 text-[10px] bg-white border border-pink-200 rounded px-2 py-1 outline-none placeholder:text-zinc-300" />
-          <input value={profile.igFollowers ?? ''} onChange={(e) => onUpdate({ igFollowers: e.target.value || undefined })} placeholder="Followers" className="w-20 text-[10px] bg-white border border-pink-200 rounded px-2 py-1 outline-none placeholder:text-zinc-300 text-right" />
+          <input value={profile.igUrl ?? ''} onChange={(e) => onUpdate({ igUrl: e.target.value || undefined })} placeholder="Instagram URL" className="flex-1 text-[10px] bg-white border border-pink-200 rounded px-2 py-1 outline-none placeholder:text-zinc-400" />
+          <input value={profile.igFollowers ?? ''} onChange={(e) => onUpdate({ igFollowers: e.target.value || undefined })} placeholder="Followers" className="w-20 text-[10px] bg-white border border-pink-200 rounded px-2 py-1 outline-none placeholder:text-zinc-400 text-right" />
         </div>
       )}
       {openFields.has('tiktok') && (
         <div className="flex gap-1.5 animate-fade-in">
-          <input value={profile.tiktokUrl ?? ''} onChange={(e) => onUpdate({ tiktokUrl: e.target.value || undefined })} placeholder="TikTok URL" className="flex-1 text-[10px] bg-white border border-zinc-300 rounded px-2 py-1 outline-none placeholder:text-zinc-300" />
-          <input value={profile.tiktokFollowers ?? ''} onChange={(e) => onUpdate({ tiktokFollowers: e.target.value || undefined })} placeholder="Followers" className="w-20 text-[10px] bg-white border border-zinc-300 rounded px-2 py-1 outline-none placeholder:text-zinc-300 text-right" />
+          <input value={profile.tiktokUrl ?? ''} onChange={(e) => onUpdate({ tiktokUrl: e.target.value || undefined })} placeholder="TikTok URL" className="flex-1 text-[10px] bg-white border border-zinc-300 rounded px-2 py-1 outline-none placeholder:text-zinc-400" />
+          <input value={profile.tiktokFollowers ?? ''} onChange={(e) => onUpdate({ tiktokFollowers: e.target.value || undefined })} placeholder="Followers" className="w-20 text-[10px] bg-white border border-zinc-300 rounded px-2 py-1 outline-none placeholder:text-zinc-400 text-right" />
         </div>
       )}
       {openFields.has('twitter') && (
         <div className="flex gap-1.5 animate-fade-in">
-          <input value={profile.twitterUrl ?? ''} onChange={(e) => onUpdate({ twitterUrl: e.target.value || undefined })} placeholder="X / Twitter URL" className="flex-1 text-[10px] bg-white border border-zinc-300 rounded px-2 py-1 outline-none placeholder:text-zinc-300" />
-          <input value={profile.twitterFollowers ?? ''} onChange={(e) => onUpdate({ twitterFollowers: e.target.value || undefined })} placeholder="Followers" className="w-20 text-[10px] bg-white border border-zinc-300 rounded px-2 py-1 outline-none placeholder:text-zinc-300 text-right" />
+          <input value={profile.twitterUrl ?? ''} onChange={(e) => onUpdate({ twitterUrl: e.target.value || undefined })} placeholder="X / Twitter URL" className="flex-1 text-[10px] bg-white border border-zinc-300 rounded px-2 py-1 outline-none placeholder:text-zinc-400" />
+          <input value={profile.twitterFollowers ?? ''} onChange={(e) => onUpdate({ twitterFollowers: e.target.value || undefined })} placeholder="Followers" className="w-20 text-[10px] bg-white border border-zinc-300 rounded px-2 py-1 outline-none placeholder:text-zinc-400 text-right" />
         </div>
       )}
     </div>
@@ -722,7 +723,7 @@ function CollabEditor({
   onDelete?: () => void;
 }) {
   const [title, setTitle] = useState(note?.title ?? '');
-  const [color, setColor] = useState(note?.color ?? '#000000');
+  const [color, setColor] = useState(note?.color && note.color !== '#000000' ? note.color : '#6366f1');
   const [tags, setTags] = useState<string[]>(note?.tags ?? []);
   const [notes, setNotes] = useState(note?.description ?? '');
   const [profiles, setProfiles] = useState<CollabProfile[]>(
@@ -846,9 +847,9 @@ function CollabEditor({
             }
 
             return (
-              <div key={idx} className="p-3 rounded-lg border border-border-light bg-zinc-50/50 space-y-2">
+              <div key={idx} className="p-3 rounded-lg border border-zinc-300 bg-white space-y-2">
                 <div className="flex items-center justify-between gap-2">
-                  <span className="text-[10px] font-semibold text-muted uppercase">Profile {idx + 1}</span>
+                  <span className="text-[10px] font-semibold text-zinc-600 uppercase">Profile {idx + 1}</span>
                   <div className="flex gap-1">
                     {profiles.length > 1 && (
                       <button type="button" onClick={() => removeProfile(idx)} className="text-[10px] text-red-500 hover:text-red-600">
@@ -858,11 +859,11 @@ function CollabEditor({
                   </div>
                 </div>
                 <div className="flex gap-2">
-                  <div className="flex-shrink-0 w-12 h-12 rounded-full overflow-hidden bg-zinc-200 flex items-center justify-center">
+                  <div className="flex-shrink-0 w-12 h-12 rounded-full overflow-hidden bg-purple-100 flex items-center justify-center border border-purple-200">
                     {profile.profilePicUrl ? (
                       <img src={profile.profilePicUrl} alt="" className="w-full h-full object-cover" />
                     ) : (
-                      <svg width="20" height="20" fill="none" stroke="#a1a1aa" strokeWidth="2" viewBox="0 0 24 24">
+                      <svg width="20" height="20" fill="none" stroke="#8b5cf6" strokeWidth="2" viewBox="0 0 24 24">
                         <path d="M12 5v14M5 12h14" />
                       </svg>
                     )}
@@ -872,7 +873,7 @@ function CollabEditor({
                       value={profile.name}
                       onChange={(e) => updateProfile(idx, { name: e.target.value })}
                       placeholder="Name"
-                      className="w-full text-xs bg-white border border-border-light rounded px-2 py-1 outline-none placeholder:text-zinc-300"
+                      className="w-full text-xs bg-white border border-zinc-300 rounded px-2 py-1 outline-none placeholder:text-zinc-400 focus:border-blue-400 transition-colors"
                     />
                   </div>
                 </div>
@@ -883,7 +884,7 @@ function CollabEditor({
                     onChange={(e) => updateProfile(idx, { notes: e.target.value || undefined })}
                     placeholder="Notes about this person"
                     rows={2}
-                    className="flex-1 text-[10px] bg-white border border-border-light rounded px-2 py-1 outline-none resize-none placeholder:text-zinc-300"
+                    className="flex-1 text-[10px] bg-white border border-zinc-300 rounded px-2 py-1 outline-none resize-none placeholder:text-zinc-400 focus:border-blue-400 transition-colors"
                   />
                   <button
                     type="button"
@@ -1161,7 +1162,8 @@ export default function ContentPage() {
               <p className="text-[11px] text-zinc-400 text-center py-8">Scheduled content will appear here</p>
             ) : (
               getNotesForStatus('used').map((note) => {
-                const displayColor = (note.tags.length > 0 && TAG_DEFAULT_COLORS[note.tags[0]]) ? TAG_DEFAULT_COLORS[note.tags[0]] : (note.color || '#d4d4d8');
+                const usedRawColor = note.color === '#000000' ? undefined : note.color;
+                const displayColor = (note.tags.length > 0 && TAG_DEFAULT_COLORS[note.tags[0]]) ? TAG_DEFAULT_COLORS[note.tags[0]] : (usedRawColor || '#6366f1');
                 return (
                   <div
                     key={note.id}
