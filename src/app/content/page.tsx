@@ -301,10 +301,14 @@ function NoteEditor({
   const [showNewTagForm, setShowNewTagForm] = useState(false);
   const [newTagName, setNewTagName] = useState('');
   const [newTagColor, setNewTagColor] = useState('#3b82f6');
+  const [editingTag, setEditingTag] = useState<string | null>(null);
+  const [editTagName, setEditTagName] = useState('');
+  const [editTagColor, setEditTagColor] = useState('#3b82f6');
+  const [showManageTags, setShowManageTags] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const status = note?.status ?? 'idea';
   const isApproved = status === 'ready';
-  const { customTags, addCustomTag, addContact, contacts } = useStore();
+  const { customTags, addCustomTag, removeCustomTag, addContact, contacts } = useStore();
 
   customTags.forEach((t) => { TAG_DEFAULT_COLORS[t.name] = t.color; });
 
@@ -417,7 +421,7 @@ function NoteEditor({
         />
 
         <div>
-          <div className="flex flex-wrap gap-1.5">
+          <div className="flex flex-wrap gap-1.5 items-center">
             {[...PRESET_TAGS.map((t) => ({ name: t, color: TAG_DEFAULT_COLORS[t] || '#000' })), ...customTags].map(({ name: tag, color: tagColor }) => {
               const isActive = tags.includes(tag);
               return (
@@ -438,11 +442,23 @@ function NoteEditor({
             })}
             <button
               type="button"
-              onClick={() => setShowNewTagForm(!showNewTagForm)}
+              onClick={() => { setShowNewTagForm(!showNewTagForm); setShowManageTags(false); }}
               className="text-[10px] px-2 py-0.5 rounded-full font-medium border border-dashed border-zinc-300 text-zinc-400 hover:border-zinc-400 hover:text-zinc-500 transition-colors"
             >
               + New Tag
             </button>
+            {customTags.length > 0 && (
+              <button
+                type="button"
+                onClick={() => { setShowManageTags(!showManageTags); setShowNewTagForm(false); setEditingTag(null); }}
+                className="text-[10px] px-1.5 py-0.5 rounded-full text-zinc-400 hover:text-zinc-600 transition-colors"
+                title="Edit / Delete tags"
+              >
+                <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                  <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" />
+                </svg>
+              </button>
+            )}
           </div>
           {showNewTagForm && (
             <div className="mt-2 flex items-center gap-2 p-2 bg-zinc-50 rounded-lg border border-border-light">
@@ -453,6 +469,7 @@ function NoteEditor({
                 className="w-6 h-6 rounded cursor-pointer border-0 p-0"
               />
               <input
+                autoFocus
                 value={newTagName}
                 onChange={(e) => setNewTagName(e.target.value)}
                 placeholder="Tag name"
@@ -483,6 +500,89 @@ function NoteEditor({
               >
                 Add
               </button>
+            </div>
+          )}
+          {showManageTags && customTags.length > 0 && (
+            <div className="mt-2 space-y-1 p-2 bg-zinc-50 rounded-lg border border-border-light">
+              {customTags.map((ct) => (
+                <div key={ct.name} className="flex items-center gap-2">
+                  {editingTag === ct.name ? (
+                    <>
+                      <input
+                        type="color"
+                        value={editTagColor}
+                        onChange={(e) => setEditTagColor(e.target.value)}
+                        className="w-5 h-5 rounded cursor-pointer border-0 p-0 flex-shrink-0"
+                      />
+                      <input
+                        autoFocus
+                        value={editTagName}
+                        onChange={(e) => setEditTagName(e.target.value)}
+                        className="flex-1 text-[11px] bg-white border border-border-light rounded px-2 py-1 outline-none focus:border-blue-400"
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            if (editTagName.trim()) {
+                              removeCustomTag(ct.name);
+                              delete TAG_DEFAULT_COLORS[ct.name];
+                              addCustomTag({ name: editTagName.trim(), color: editTagColor });
+                              TAG_DEFAULT_COLORS[editTagName.trim()] = editTagColor;
+                              if (tags.includes(ct.name)) setTags(tags.map((t) => t === ct.name ? editTagName.trim() : t));
+                              setEditingTag(null);
+                            }
+                          } else if (e.key === 'Escape') {
+                            setEditingTag(null);
+                          }
+                        }}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (editTagName.trim()) {
+                            removeCustomTag(ct.name);
+                            delete TAG_DEFAULT_COLORS[ct.name];
+                            addCustomTag({ name: editTagName.trim(), color: editTagColor });
+                            TAG_DEFAULT_COLORS[editTagName.trim()] = editTagColor;
+                            if (tags.includes(ct.name)) setTags(tags.map((t) => t === ct.name ? editTagName.trim() : t));
+                            setEditingTag(null);
+                          }
+                        }}
+                        className="text-[10px] px-1.5 py-0.5 text-blue-500 hover:text-blue-600 font-medium transition-colors"
+                      >
+                        Save
+                      </button>
+                      <button type="button" onClick={() => setEditingTag(null)} className="text-[10px] text-zinc-400 hover:text-zinc-500 transition-colors">
+                        Cancel
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: ct.color }} />
+                      <span className="flex-1 text-[11px] font-medium" style={{ color: ct.color }}>{ct.name}</span>
+                      <button
+                        type="button"
+                        onClick={() => { setEditingTag(ct.name); setEditTagName(ct.name); setEditTagColor(ct.color); }}
+                        className="text-[10px] text-zinc-400 hover:text-blue-500 transition-colors px-1"
+                        title="Edit tag"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          removeCustomTag(ct.name);
+                          delete TAG_DEFAULT_COLORS[ct.name];
+                          if (tags.includes(ct.name)) { setTags([]); setColor('#000000'); }
+                        }}
+                        className="text-[10px] text-zinc-400 hover:text-red-500 transition-colors px-1"
+                        title="Delete tag"
+                      >
+                        Delete
+                      </button>
+                    </>
+                  )}
+                </div>
+              ))}
             </div>
           )}
         </div>
@@ -575,13 +675,15 @@ function NoteEditor({
 
         </div>
 
-        <textarea
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-          placeholder="📝 Flesh it out... notes, format ideas, guest list, equipment needed, talking points..."
-          rows={3}
-          className="w-full text-xs bg-zinc-50 rounded-md border border-border-light p-2 outline-none resize-none placeholder:text-zinc-300 focus:border-primary/30"
-        />
+        {note && (
+          <textarea
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder="📝 Flesh it out... notes, format ideas, guest list, equipment needed, talking points..."
+            rows={3}
+            className="w-full text-xs bg-zinc-50 rounded-md border border-border-light p-2 outline-none resize-none placeholder:text-zinc-300 focus:border-primary/30"
+          />
+        )}
 
         {isApproved && (
           <>
