@@ -193,7 +193,7 @@ export default function DayView({ date, onClose }: DayViewProps) {
       startTime: '10:00',
       endTime: '11:00',
       title: note.title,
-      color: note.color === '#000000' ? '#6366f1' : (note.color || '#6366f1'),
+      color: note.color || '#000000',
       address: note.address,
       contact: note.contact,
       contactName: note.contactName,
@@ -345,7 +345,7 @@ export default function DayView({ date, onClose }: DayViewProps) {
               {filteredNotes.map((note) => {
                 const statusInfo = NOTE_STATUSES.find((s) => s.value === (note.status ?? 'idea'));
                 const noteTagColor = note.tags.length > 0 && TAG_DEFAULT_COLORS[note.tags[0]] ? TAG_DEFAULT_COLORS[note.tags[0]] : undefined;
-                const noteDisplayColor = noteTagColor || (note.color === '#000000' ? '#6366f1' : (note.color || '#6366f1'));
+                const noteDisplayColor = noteTagColor || note.color || '#000000';
                 return (
                   <div
                     key={note.id}

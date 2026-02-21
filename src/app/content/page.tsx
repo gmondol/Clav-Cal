@@ -103,8 +103,7 @@ function ContentCard({
     data: { type: 'content-note', note },
   });
 
-  const rawColor = note.color === '#000000' ? undefined : note.color;
-  const displayColor = (note.tags.length > 0 && TAG_DEFAULT_COLORS[note.tags[0]]) ? TAG_DEFAULT_COLORS[note.tags[0]] : (rawColor || '#6366f1');
+  const displayColor = (note.tags.length > 0 && TAG_DEFAULT_COLORS[note.tags[0]]) ? TAG_DEFAULT_COLORS[note.tags[0]] : (note.color || '#000000');
 
   return (
     <div
@@ -249,7 +248,7 @@ function NoteEditor({
 }) {
   const [title, setTitle] = useState(note?.title ?? '');
   const [description, setDescription] = useState(note?.description ?? '');
-  const [color, setColor] = useState(note?.color && note.color !== '#000000' ? note.color : '#6366f1');
+  const [color, setColor] = useState(note?.color ?? '#000000');
   const [tags, setTags] = useState<string[]>(note?.tags ?? []);
   const [showTagPicker, setShowTagPicker] = useState(false);
   const [address, setAddress] = useState(note?.address ?? '');
@@ -777,7 +776,7 @@ function CollabEditor({
   onDelete?: () => void;
 }) {
   const [title, setTitle] = useState(note?.title ?? '');
-  const [color, setColor] = useState(note?.color && note.color !== '#000000' ? note.color : '#6366f1');
+  const [color, setColor] = useState(note?.color ?? '#000000');
   const [tags, setTags] = useState<string[]>(note?.tags ?? []);
   const [notes, setNotes] = useState(note?.description ?? '');
   const [profiles, setProfiles] = useState<CollabProfile[]>(
@@ -1228,8 +1227,7 @@ export default function ContentPage() {
               <p className="text-[11px] text-zinc-400 text-center py-8">Scheduled content will appear here</p>
             ) : (
               getNotesForStatus('used').map((note) => {
-                const usedRawColor = note.color === '#000000' ? undefined : note.color;
-                const displayColor = (note.tags.length > 0 && TAG_DEFAULT_COLORS[note.tags[0]]) ? TAG_DEFAULT_COLORS[note.tags[0]] : (usedRawColor || '#6366f1');
+                const displayColor = (note.tags.length > 0 && TAG_DEFAULT_COLORS[note.tags[0]]) ? TAG_DEFAULT_COLORS[note.tags[0]] : (note.color || '#000000');
                 return (
                   <div
                     key={note.id}

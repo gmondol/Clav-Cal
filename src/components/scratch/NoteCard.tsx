@@ -19,8 +19,7 @@ export default function NoteCard({ note, onEdit, onArchive, onDelete }: NoteCard
   });
 
   const tagColor = note.tags.length > 0 && TAG_DEFAULT_COLORS[note.tags[0]] ? TAG_DEFAULT_COLORS[note.tags[0]] : undefined;
-  const rawColor = note.color === '#000000' ? undefined : note.color;
-  const displayColor = tagColor || rawColor || '#6366f1';
+  const displayColor = tagColor || note.color || '#000000';
   const mergedStyle: React.CSSProperties = {
     transform: CSS.Transform.toString(transform) ?? undefined,
     transition: transition ?? undefined,
