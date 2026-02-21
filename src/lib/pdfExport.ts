@@ -42,9 +42,6 @@ export async function generateSchedulePDF(
   let y = margin;
 
   const faviconData = await loadFavicon();
-  if (faviconData) {
-    doc.addImage(faviconData, 'PNG', pageW - margin - 24, margin, 24, 24);
-  }
 
   const date = new Date(selectedDate + 'T00:00:00');
   let rangeStart: string;
@@ -73,13 +70,19 @@ export async function generateSchedulePDF(
 
   doc.setFillColor(37, 99, 235);
   doc.rect(0, 0, pageW, 36, 'F');
+
+  if (faviconData) {
+    doc.addImage(faviconData, 'PNG', margin, 6, 24, 24);
+  }
+
   doc.setTextColor(255, 255, 255);
   doc.setFontSize(22);
   doc.setFont('helvetica', 'bold');
-  doc.text('Clav StreamSchedule', margin, 22);
+  doc.text('Clav StreamSchedule', pageW / 2, 20, { align: 'center' });
   doc.setFontSize(11);
   doc.setFont('helvetica', 'normal');
-  doc.text((type === 'daily' ? 'Daily' : type === 'weekly' ? 'Weekly' : 'Monthly') + ' Summary', margin, 30);
+  const subtitleText = (type === 'daily' ? 'Daily' : type === 'weekly' ? 'Weekly' : 'Monthly') + ' Summary';
+  doc.text(subtitleText, pageW / 2, 30, { align: 'center' });
 
   y = 48;
 
