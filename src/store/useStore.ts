@@ -84,6 +84,8 @@ function noteToRow(note: ScratchNote) {
     address: note.address ?? null,
     contact: note.contact ?? null,
     contact_name: note.contactName ?? null,
+    contact_last_name: note.contactLastName ?? null,
+    contact_role: note.contactRole ?? null,
     contact_phone: note.contactPhone ?? null,
     contact_email: note.contactEmail ?? null,
     contact_notes: note.contactNotes ?? null,
@@ -122,6 +124,8 @@ function rowToNote(row: Record<string, unknown>): ScratchNote {
     address: (row.address as string) ?? undefined,
     contact: (row.contact as string) ?? undefined,
     contactName: (row.contact_name as string) ?? undefined,
+    contactLastName: (row.contact_last_name as string) ?? undefined,
+    contactRole: (row.contact_role as string) ?? undefined,
     contactPhone: (row.contact_phone as string) ?? undefined,
     contactEmail: (row.contact_email as string) ?? undefined,
     contactNotes: (row.contact_notes as string) ?? undefined,
@@ -141,6 +145,8 @@ function eventToRow(event: CalendarEvent) {
     address: event.address ?? null,
     contact: event.contact ?? null,
     contact_name: event.contactName ?? null,
+    contact_last_name: event.contactLastName ?? null,
+    contact_role: event.contactRole ?? null,
     contact_phone: event.contactPhone ?? null,
     contact_email: event.contactEmail ?? null,
     contact_notes: event.contactNotes ?? null,
@@ -164,6 +170,8 @@ function rowToEvent(row: Record<string, unknown>): CalendarEvent {
     address: (row.address as string) ?? undefined,
     contact: (row.contact as string) ?? undefined,
     contactName: (row.contact_name as string) ?? undefined,
+    contactLastName: (row.contact_last_name as string) ?? undefined,
+    contactRole: (row.contact_role as string) ?? undefined,
     contactPhone: (row.contact_phone as string) ?? undefined,
     contactEmail: (row.contact_email as string) ?? undefined,
     contactNotes: (row.contact_notes as string) ?? undefined,
@@ -186,11 +194,17 @@ function contactToRow(c: Contact) {
     company: c.company ?? null,
     profile_pic_url: c.profilePicUrl ?? null,
     twitch_url: c.twitchUrl ?? null,
+    twitch_followers: c.twitchFollowers ?? null,
     kick_url: c.kickUrl ?? null,
+    kick_followers: c.kickFollowers ?? null,
     ig_url: c.igUrl ?? null,
+    ig_followers: c.igFollowers ?? null,
     twitter_url: c.twitterUrl ?? null,
+    twitter_followers: c.twitterFollowers ?? null,
     tiktok_url: c.tiktokUrl ?? null,
+    tiktok_followers: c.tiktokFollowers ?? null,
     youtube_url: c.youtubeUrl ?? null,
+    youtube_followers: c.youtubeFollowers ?? null,
     notes: c.notes ?? null,
     created_at: c.createdAt,
   };
@@ -206,11 +220,17 @@ function rowToContact(row: Record<string, unknown>): Contact {
     company: (row.company as string) ?? undefined,
     profilePicUrl: (row.profile_pic_url as string) ?? undefined,
     twitchUrl: (row.twitch_url as string) ?? undefined,
+    twitchFollowers: (row.twitch_followers as string) ?? undefined,
     kickUrl: (row.kick_url as string) ?? undefined,
+    kickFollowers: (row.kick_followers as string) ?? undefined,
     igUrl: (row.ig_url as string) ?? undefined,
+    igFollowers: (row.ig_followers as string) ?? undefined,
     twitterUrl: (row.twitter_url as string) ?? undefined,
+    twitterFollowers: (row.twitter_followers as string) ?? undefined,
     tiktokUrl: (row.tiktok_url as string) ?? undefined,
+    tiktokFollowers: (row.tiktok_followers as string) ?? undefined,
     youtubeUrl: (row.youtube_url as string) ?? undefined,
+    youtubeFollowers: (row.youtube_followers as string) ?? undefined,
     notes: (row.notes as string) ?? undefined,
     createdAt: row.created_at as string,
   };
@@ -288,6 +308,8 @@ export const useStore = create<StoreState>()(
       if (updates.address !== undefined) row.address = updates.address || null;
       if (updates.contact !== undefined) row.contact = updates.contact || null;
       if (updates.contactName !== undefined) row.contact_name = updates.contactName || null;
+      if (updates.contactLastName !== undefined) row.contact_last_name = updates.contactLastName || null;
+      if (updates.contactRole !== undefined) row.contact_role = updates.contactRole || null;
       if (updates.contactPhone !== undefined) row.contact_phone = updates.contactPhone || null;
       if (updates.contactEmail !== undefined) row.contact_email = updates.contactEmail || null;
       if (updates.contactNotes !== undefined) row.contact_notes = updates.contactNotes || null;
@@ -365,6 +387,8 @@ export const useStore = create<StoreState>()(
       if (updates.address !== undefined) row.address = updates.address;
       if (updates.contact !== undefined) row.contact = updates.contact;
       if (updates.contactName !== undefined) row.contact_name = updates.contactName;
+      if (updates.contactLastName !== undefined) row.contact_last_name = updates.contactLastName;
+      if (updates.contactRole !== undefined) row.contact_role = updates.contactRole;
       if (updates.contactPhone !== undefined) row.contact_phone = updates.contactPhone;
       if (updates.contactEmail !== undefined) row.contact_email = updates.contactEmail;
       if (updates.contactNotes !== undefined) row.contact_notes = updates.contactNotes;
@@ -427,11 +451,17 @@ export const useStore = create<StoreState>()(
       if (updates.company !== undefined) row.company = updates.company || null;
       if (updates.profilePicUrl !== undefined) row.profile_pic_url = updates.profilePicUrl || null;
       if (updates.twitchUrl !== undefined) row.twitch_url = updates.twitchUrl || null;
+      if (updates.twitchFollowers !== undefined) row.twitch_followers = updates.twitchFollowers || null;
       if (updates.kickUrl !== undefined) row.kick_url = updates.kickUrl || null;
+      if (updates.kickFollowers !== undefined) row.kick_followers = updates.kickFollowers || null;
       if (updates.igUrl !== undefined) row.ig_url = updates.igUrl || null;
+      if (updates.igFollowers !== undefined) row.ig_followers = updates.igFollowers || null;
       if (updates.twitterUrl !== undefined) row.twitter_url = updates.twitterUrl || null;
+      if (updates.twitterFollowers !== undefined) row.twitter_followers = updates.twitterFollowers || null;
       if (updates.tiktokUrl !== undefined) row.tiktok_url = updates.tiktokUrl || null;
+      if (updates.tiktokFollowers !== undefined) row.tiktok_followers = updates.tiktokFollowers || null;
       if (updates.youtubeUrl !== undefined) row.youtube_url = updates.youtubeUrl || null;
+      if (updates.youtubeFollowers !== undefined) row.youtube_followers = updates.youtubeFollowers || null;
       if (updates.notes !== undefined) row.notes = updates.notes || null;
       if (Object.keys(row).length > 0) {
         supabase.from('contacts').update(row).eq('id', id).then((r) => sbLog('update contact', r));

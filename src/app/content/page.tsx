@@ -139,11 +139,11 @@ function ContentCard({
           {note.collabProfiles && note.collabProfiles.length > 0 && (
             <div className="flex -space-x-2 flex-shrink-0">
               {note.collabProfiles.slice(0, 3).map((p, i) => (
-                <div key={i} className="w-6 h-6 rounded-full overflow-hidden bg-purple-200 border-2 border-white flex items-center justify-center">
+                <div key={i} className="w-6 h-6 rounded-full overflow-hidden bg-zinc-200 border-2 border-white flex items-center justify-center">
                   {p.profilePicUrl ? (
                     <img src={p.profilePicUrl} alt="" className="w-full h-full object-cover" />
                   ) : (
-                    <span className="text-[10px] font-bold text-purple-600">{p.name?.[0]?.toUpperCase() || '?'}</span>
+                    <span className="text-[10px] font-bold text-zinc-500">{p.name?.[0]?.toUpperCase() || '?'}</span>
                   )}
                 </div>
               ))}
@@ -264,6 +264,8 @@ function NoteEditor({
   const [showTagPicker, setShowTagPicker] = useState(false);
   const [address, setAddress] = useState(note?.address ?? '');
   const [contactName, setContactName] = useState(note?.contactName ?? '');
+  const [contactLastName, setContactLastName] = useState(note?.contactLastName ?? '');
+  const [contactRole, setContactRole] = useState(note?.contactRole ?? '');
   const [contactPhone, setContactPhone] = useState(note?.contactPhone ?? '');
   const [contactEmail, setContactEmail] = useState(note?.contactEmail ?? '');
   const [contactNotes, setContactNotes] = useState(note?.contactNotes ?? '');
@@ -271,6 +273,7 @@ function NoteEditor({
   const [uploading, setUploading] = useState(false);
   const [linkedCollabIds, setLinkedCollabIds] = useState<string[]>(note?.linkedCollabIds ?? []);
   const [showCollabPicker, setShowCollabPicker] = useState(false);
+  const [showContact, setShowContact] = useState(!!(note?.contactName || note?.contactLastName || note?.contactRole || note?.contactPhone || note?.contactEmail || note?.contactNotes));
   const [showNewTagForm, setShowNewTagForm] = useState(false);
   const [newTagName, setNewTagName] = useState('');
   const [newTagColor, setNewTagColor] = useState('#3b82f6');
@@ -348,6 +351,8 @@ function NoteEditor({
       archived: false,
       address: address.trim() || undefined,
       contactName: contactName.trim() || undefined,
+      contactLastName: contactLastName.trim() || undefined,
+      contactRole: contactRole.trim() || undefined,
       contactPhone: contactPhone.trim() || undefined,
       contactEmail: contactEmail.trim() || undefined,
       contactNotes: contactNotes.trim() || undefined,
@@ -461,60 +466,101 @@ function NoteEditor({
               className="w-full text-xs bg-zinc-50 rounded-md border border-border-light p-2 outline-none resize-none placeholder:text-zinc-300 focus:border-primary/30"
             />
 
-            <div className="space-y-2 p-3 rounded-lg border border-zinc-200 bg-white">
-              <div className="flex items-center justify-between">
-                <p className="text-[10px] font-semibold text-zinc-500 uppercase tracking-wide">👤 Point of Contact</p>
-                {contactName.trim() && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const existing = contacts.find((c) => c.name.toLowerCase() === contactName.trim().toLowerCase());
-                      if (existing) return;
-                      addContact({
-                        name: contactName.trim(),
-                        phone: contactPhone.trim() || undefined,
-                        email: contactEmail.trim() || undefined,
-                        notes: contactNotes.trim() || undefined,
-                      });
-                    }}
-                    className="text-[10px] font-medium text-blue-500 hover:text-blue-600 transition-colors flex items-center gap-1 px-2 py-0.5 rounded-md hover:bg-blue-50"
-                    title="Save to Contacts"
-                  >
-                    <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                      <path d="M16 21v-2a4 4 0 00-4-4H5a4 4 0 00-4-4v2" /><circle cx="8.5" cy="7" r="4" /><path d="M20 8v6M23 11h-6" />
-                    </svg>
-                    Save to Contacts
-                  </button>
-                )}
+            {!showContact ? (
+              <button
+                type="button"
+                onClick={() => setShowContact(true)}
+                className="w-full flex items-center justify-center gap-1.5 text-xs text-zinc-400 hover:text-zinc-600 py-2 border border-dashed border-zinc-300 rounded-lg hover:border-zinc-400 hover:bg-zinc-50 transition-colors"
+              >
+                <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                  <circle cx="12" cy="7" r="4" /><path d="M5.5 21v-2a6 6 0 0113 0v2" /><path d="M20 8v6M23 11h-6" />
+                </svg>
+                Add Point of Contact
+              </button>
+            ) : (
+              <div className="space-y-2 p-3 rounded-lg border border-zinc-200 bg-white">
+                <div className="flex items-center justify-between">
+                  <p className="text-[10px] font-semibold text-zinc-500 uppercase tracking-wide">👤 Point of Contact</p>
+                  <div className="flex items-center gap-2">
+                    {contactName.trim() && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const fullName = `${contactName.trim()} ${contactLastName.trim()}`.trim();
+                          const existing = contacts.find((c) => c.name.toLowerCase() === fullName.toLowerCase());
+                          if (existing) return;
+                          addContact({
+                            name: fullName,
+                            role: contactRole.trim() || undefined,
+                            phone: contactPhone.trim() || undefined,
+                            email: contactEmail.trim() || undefined,
+                            notes: contactNotes.trim() || undefined,
+                          });
+                          setShowContact(false);
+                          setContactName(''); setContactLastName(''); setContactRole(''); setContactPhone(''); setContactEmail(''); setContactNotes('');
+                        }}
+                        className="text-[10px] font-medium text-blue-500 hover:text-blue-600 transition-colors flex items-center gap-1 px-2 py-0.5 rounded-md hover:bg-blue-50"
+                        title="Save to Contacts"
+                      >
+                        <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                          <path d="M16 21v-2a4 4 0 00-4-4H5a4 4 0 00-4-4v2" /><circle cx="8.5" cy="7" r="4" /><path d="M20 8v6M23 11h-6" />
+                        </svg>
+                        Save to Contacts
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => setShowContact(false)}
+                      className="text-zinc-400 hover:text-zinc-600 transition-colors"
+                      title="Close"
+                    >
+                      <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                        <path d="M18 6L6 18M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <input
+                    value={contactName}
+                    onChange={(e) => setContactName(e.target.value)}
+                    placeholder="First name"
+                    className="text-xs bg-zinc-50 border border-zinc-200 rounded-md px-2 py-1.5 outline-none placeholder:text-zinc-400 focus:border-blue-400 transition-colors"
+                  />
+                  <input
+                    value={contactLastName}
+                    onChange={(e) => setContactLastName(e.target.value)}
+                    placeholder="Last name"
+                    className="text-xs bg-zinc-50 border border-zinc-200 rounded-md px-2 py-1.5 outline-none placeholder:text-zinc-400 focus:border-blue-400 transition-colors"
+                  />
+                  <input
+                    value={contactRole}
+                    onChange={(e) => setContactRole(e.target.value)}
+                    placeholder="Role (e.g. Manager, Creator)"
+                    className="col-span-2 text-xs bg-zinc-50 border border-zinc-200 rounded-md px-2 py-1.5 outline-none placeholder:text-zinc-400 focus:border-blue-400 transition-colors"
+                  />
+                  <input
+                    value={contactPhone}
+                    onChange={(e) => setContactPhone(e.target.value)}
+                    placeholder="Phone"
+                    className="text-xs bg-zinc-50 border border-zinc-200 rounded-md px-2 py-1.5 outline-none placeholder:text-zinc-400 focus:border-blue-400 transition-colors"
+                  />
+                  <input
+                    value={contactEmail}
+                    onChange={(e) => setContactEmail(e.target.value)}
+                    placeholder="Email"
+                    className="text-xs bg-zinc-50 border border-zinc-200 rounded-md px-2 py-1.5 outline-none placeholder:text-zinc-400 focus:border-blue-400 transition-colors"
+                  />
+                </div>
+                <textarea
+                  value={contactNotes}
+                  onChange={(e) => setContactNotes(e.target.value)}
+                  placeholder="Contact notes..."
+                  rows={2}
+                  className="w-full text-xs bg-zinc-50 border border-zinc-200 rounded-md px-2 py-1.5 outline-none resize-none placeholder:text-zinc-400 focus:border-blue-400 transition-colors"
+                />
               </div>
-              <div className="grid grid-cols-2 gap-2">
-                <input
-                  value={contactName}
-                  onChange={(e) => setContactName(e.target.value)}
-                  placeholder="Name"
-                  className="text-xs bg-zinc-50 border border-zinc-200 rounded-md px-2 py-1.5 outline-none placeholder:text-zinc-400 focus:border-blue-400 transition-colors"
-                />
-                <input
-                  value={contactPhone}
-                  onChange={(e) => setContactPhone(e.target.value)}
-                  placeholder="Phone"
-                  className="text-xs bg-zinc-50 border border-zinc-200 rounded-md px-2 py-1.5 outline-none placeholder:text-zinc-400 focus:border-blue-400 transition-colors"
-                />
-                <input
-                  value={contactEmail}
-                  onChange={(e) => setContactEmail(e.target.value)}
-                  placeholder="Email"
-                  className="col-span-2 text-xs bg-zinc-50 border border-zinc-200 rounded-md px-2 py-1.5 outline-none placeholder:text-zinc-400 focus:border-blue-400 transition-colors"
-                />
-              </div>
-              <textarea
-                value={contactNotes}
-                onChange={(e) => setContactNotes(e.target.value)}
-                placeholder="Contact notes..."
-                rows={2}
-                className="w-full text-xs bg-zinc-50 border border-zinc-200 rounded-md px-2 py-1.5 outline-none resize-none placeholder:text-zinc-400 focus:border-blue-400 transition-colors"
-              />
-            </div>
+            )}
 
             {/* Attached Collabs */}
             {linkedCollabs.length > 0 && (
@@ -523,24 +569,25 @@ function NoteEditor({
                   const profiles = collab.collabProfiles ?? [];
                   const profileNames = profiles.map((p) => p.name).filter(Boolean).join(', ');
                   return (
-                    <div key={collab.id} className="flex items-center gap-2 px-2.5 py-1.5 bg-purple-50 border border-purple-200 rounded-lg">
+                    <div key={collab.id} className="flex items-center gap-2 px-2.5 py-1.5 bg-red-500 rounded-lg">
                       <div className="flex -space-x-1.5 flex-shrink-0">
                         {profiles.slice(0, 3).map((p, i) => (
-                          <div key={i} className="w-5 h-5 rounded-full overflow-hidden bg-purple-200 border border-white flex items-center justify-center">
+                          <div key={i} className="w-5 h-5 rounded-full overflow-hidden bg-white/30 border border-white flex items-center justify-center">
                             {p.profilePicUrl ? (
                               <img src={p.profilePicUrl} alt={p.name} className="w-full h-full object-cover" />
                             ) : (
-                              <span className="text-[8px] text-purple-600">{p.name?.[0]?.toUpperCase()}</span>
+                              <span className="text-[8px] text-white font-bold">{p.name?.[0]?.toUpperCase()}</span>
                             )}
                           </div>
                         ))}
                       </div>
-                      <span className="text-[11px] font-medium text-purple-700 truncate flex-1">{collab.title || profileNames}</span>
+                      <span className="text-[11px] font-medium text-white truncate flex-1">{collab.title || profileNames}</span>
                       <button
                         type="button"
                         onClick={() => detachCollab(collab.id)}
-                        className="text-[10px] text-red-400 hover:text-red-600 font-medium flex-shrink-0 transition-colors"
+                        className="text-[10px] text-white/70 hover:text-white font-medium flex-shrink-0 transition-colors flex items-center gap-0.5"
                       >
+                        <svg width="10" height="10" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12" /></svg>
                         Detach
                       </button>
                     </div>
@@ -866,6 +913,11 @@ function CollabEditor({
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-xs font-semibold text-foreground truncate">{profile.name}</p>
+                      {(profile.phone || profile.email) && (
+                        <p className="text-[10px] text-zinc-400 truncate mt-0.5">
+                          {[profile.phone, profile.email].filter(Boolean).join(' · ')}
+                        </p>
+                      )}
                       <div className="flex items-center gap-2 mt-1 flex-wrap">
                         {profile.twitchUrl && (
                           <span className="text-[9px] px-1.5 py-0.5 rounded bg-purple-100 text-purple-600 font-medium">
@@ -933,12 +985,42 @@ function CollabEditor({
                     )}
                   </div>
                   <div className="flex-1 min-w-0 space-y-1.5">
-                    <input
-                      value={profile.name}
-                      onChange={(e) => updateProfile(idx, { name: e.target.value })}
-                      placeholder="Name"
-                      className="w-full text-xs bg-white border border-zinc-300 rounded px-2 py-1 outline-none placeholder:text-zinc-400 focus:border-blue-400 transition-colors"
-                    />
+                    <div className="grid grid-cols-2 gap-1.5">
+                      <input
+                        value={profile.firstName ?? ''}
+                        onChange={(e) => {
+                          const first = e.target.value;
+                          const last = profile.lastName ?? '';
+                          updateProfile(idx, { firstName: first, name: `${first} ${last}`.trim() });
+                        }}
+                        placeholder="First name"
+                        className="w-full text-xs bg-white border border-zinc-300 rounded px-2 py-1 outline-none placeholder:text-zinc-400 focus:border-blue-400 transition-colors"
+                      />
+                      <input
+                        value={profile.lastName ?? ''}
+                        onChange={(e) => {
+                          const last = e.target.value;
+                          const first = profile.firstName ?? '';
+                          updateProfile(idx, { lastName: last, name: `${first} ${last}`.trim() });
+                        }}
+                        placeholder="Last name"
+                        className="w-full text-xs bg-white border border-zinc-300 rounded px-2 py-1 outline-none placeholder:text-zinc-400 focus:border-blue-400 transition-colors"
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-1.5">
+                      <input
+                        value={profile.phone ?? ''}
+                        onChange={(e) => updateProfile(idx, { phone: e.target.value || undefined })}
+                        placeholder="Phone"
+                        className="w-full text-xs bg-white border border-zinc-300 rounded px-2 py-1 outline-none placeholder:text-zinc-400 focus:border-blue-400 transition-colors"
+                      />
+                      <input
+                        value={profile.email ?? ''}
+                        onChange={(e) => updateProfile(idx, { email: e.target.value || undefined })}
+                        placeholder="Email"
+                        className="w-full text-xs bg-white border border-zinc-300 rounded px-2 py-1 outline-none placeholder:text-zinc-400 focus:border-blue-400 transition-colors"
+                      />
+                    </div>
                   </div>
                 </div>
                 <SocialLinkToggles profile={profile} onUpdate={(updates) => updateProfile(idx, updates)} />
@@ -1417,7 +1499,7 @@ function ContentExportModal({ notes, onClose }: { notes: ScratchNote[]; onClose:
           <h3 className="text-base font-bold text-foreground">Download Content PDF</h3>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg hover:bg-zinc-100 text-muted hover:text-foreground transition-colors"
+            className="p-1.5 rounded-lg hover:bg-red-50 text-muted hover:text-red-500 transition-colors"
           >
             <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
               <path d="M18 6L6 18M6 6l12 12" />
@@ -1556,9 +1638,9 @@ function ContactsModal({
               <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4-4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75" />
             </svg>
             <h3 className="text-base font-bold text-foreground">Contacts</h3>
-            <span className="text-[10px] text-muted bg-zinc-100 px-1.5 py-0.5 rounded-full font-medium">{contacts.length}</span>
+            <span className="text-[10px] text-white bg-blue-500 px-1.5 py-0.5 rounded-full font-medium">{contacts.length}</span>
           </div>
-          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-zinc-100 text-muted hover:text-foreground transition-colors">
+          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-red-50 text-muted hover:text-red-500 transition-colors">
             <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
               <path d="M18 6L6 18M6 6l12 12" />
             </svg>
@@ -1579,7 +1661,7 @@ function ContactsModal({
           </div>
           <button
             onClick={startNew}
-            className="px-3 py-2 text-xs font-semibold bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors flex items-center gap-1"
+            className="px-3 py-2 text-xs font-semibold bg-white text-blue-500 rounded-lg border border-dashed border-blue-400 hover:bg-blue-50 hover:border-blue-500 transition-colors flex items-center gap-1"
           >
             <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
               <path d="M12 5v14M5 12h14" />
@@ -1684,15 +1766,28 @@ function ContactEditor({
   const [company, setCompany] = useState(contact?.company ?? '');
   const [profilePicUrl, setProfilePicUrl] = useState(contact?.profilePicUrl ?? '');
   const [twitchUrl, setTwitchUrl] = useState(contact?.twitchUrl ?? '');
+  const [twitchFollowers, setTwitchFollowers] = useState(contact?.twitchFollowers ?? '');
   const [kickUrl, setKickUrl] = useState(contact?.kickUrl ?? '');
+  const [kickFollowers, setKickFollowers] = useState(contact?.kickFollowers ?? '');
   const [igUrl, setIgUrl] = useState(contact?.igUrl ?? '');
+  const [igFollowers, setIgFollowers] = useState(contact?.igFollowers ?? '');
   const [twitterUrl, setTwitterUrl] = useState(contact?.twitterUrl ?? '');
+  const [twitterFollowers, setTwitterFollowers] = useState(contact?.twitterFollowers ?? '');
   const [tiktokUrl, setTiktokUrl] = useState(contact?.tiktokUrl ?? '');
+  const [tiktokFollowers, setTiktokFollowers] = useState(contact?.tiktokFollowers ?? '');
   const [youtubeUrl, setYoutubeUrl] = useState(contact?.youtubeUrl ?? '');
+  const [youtubeFollowers, setYoutubeFollowers] = useState(contact?.youtubeFollowers ?? '');
   const [notes, setNotes] = useState(contact?.notes ?? '');
-  const [showSocials, setShowSocials] = useState(
-    !!(contact?.twitchUrl || contact?.kickUrl || contact?.igUrl || contact?.twitterUrl || contact?.tiktokUrl || contact?.youtubeUrl)
-  );
+  const [openSocials, setOpenSocials] = useState<Set<string>>(() => {
+    const s = new Set<string>();
+    if (contact?.twitchUrl) s.add('twitch');
+    if (contact?.kickUrl) s.add('kick');
+    if (contact?.igUrl) s.add('ig');
+    if (contact?.twitterUrl) s.add('twitter');
+    if (contact?.tiktokUrl) s.add('tiktok');
+    if (contact?.youtubeUrl) s.add('youtube');
+    return s;
+  });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -1705,11 +1800,17 @@ function ContactEditor({
       company: company.trim() || undefined,
       profilePicUrl: profilePicUrl.trim() || undefined,
       twitchUrl: twitchUrl.trim() || undefined,
+      twitchFollowers: twitchFollowers.trim() || undefined,
       kickUrl: kickUrl.trim() || undefined,
+      kickFollowers: kickFollowers.trim() || undefined,
       igUrl: igUrl.trim() || undefined,
+      igFollowers: igFollowers.trim() || undefined,
       twitterUrl: twitterUrl.trim() || undefined,
+      twitterFollowers: twitterFollowers.trim() || undefined,
       tiktokUrl: tiktokUrl.trim() || undefined,
+      tiktokFollowers: tiktokFollowers.trim() || undefined,
       youtubeUrl: youtubeUrl.trim() || undefined,
+      youtubeFollowers: youtubeFollowers.trim() || undefined,
       notes: notes.trim() || undefined,
     });
   };
@@ -1726,7 +1827,7 @@ function ContactEditor({
       >
         <div className="flex items-center justify-between px-5 pt-5 pb-3">
           <h3 className="text-base font-bold text-foreground">{contact ? 'Edit Contact' : 'New Contact'}</h3>
-          <button type="button" onClick={onCancel} className="p-1.5 rounded-lg hover:bg-zinc-100 text-muted hover:text-foreground transition-colors">
+          <button type="button" onClick={onCancel} className="p-1.5 rounded-lg hover:bg-red-50 text-muted hover:text-red-500 transition-colors">
             <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
               <path d="M18 6L6 18M6 6l12 12" />
             </svg>
@@ -1735,13 +1836,23 @@ function ContactEditor({
 
         <div className="flex-1 overflow-y-auto px-5 pb-5 space-y-3">
           <div className="flex items-center gap-4 pb-2">
-            <div className="w-16 h-16 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0 overflow-hidden border-2 border-blue-200">
+            <button
+              type="button"
+              onClick={() => {
+                const url = window.prompt('Profile picture URL:', profilePicUrl || '');
+                if (url !== null) setProfilePicUrl(url);
+              }}
+              className="w-16 h-16 rounded-full bg-zinc-100 flex items-center justify-center flex-shrink-0 overflow-hidden border-2 border-zinc-300 hover:border-blue-400 hover:bg-blue-50 transition-colors cursor-pointer group"
+              title="Add profile photo"
+            >
               {profilePicUrl ? (
                 <img src={profilePicUrl} alt="" className="w-full h-full object-cover" />
               ) : (
-                <span className="text-xl font-bold text-blue-400">{name?.[0]?.toUpperCase() || '?'}</span>
+                <svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" className="text-zinc-400 group-hover:text-blue-400 transition-colors">
+                  <path d="M12 5v14M5 12h14" />
+                </svg>
               )}
-            </div>
+            </button>
             <div className="flex-1 space-y-1.5">
               <input autoFocus value={name} onChange={(e) => setName(e.target.value)} placeholder="Full name *" className={inputClass} />
               <input value={role} onChange={(e) => setRole(e.target.value)} placeholder="Role (e.g. Manager, Creator)" className={inputClass} />
@@ -1759,36 +1870,87 @@ function ContactEditor({
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-2">
-            <div>
-              <p className={labelClass}>Company</p>
-              <input value={company} onChange={(e) => setCompany(e.target.value)} placeholder="Company / Agency" className={inputClass} />
-            </div>
-            <div>
-              <p className={labelClass}>Profile Pic URL</p>
-              <input value={profilePicUrl} onChange={(e) => setProfilePicUrl(e.target.value)} placeholder="https://..." className={inputClass} />
-            </div>
+          <div>
+            <p className={labelClass}>Company</p>
+            <input value={company} onChange={(e) => setCompany(e.target.value)} placeholder="Company / Agency" className={inputClass} />
           </div>
 
-          <div>
-            <button
-              type="button"
-              onClick={() => setShowSocials(!showSocials)}
-              className="text-[11px] font-medium text-blue-500 hover:text-blue-600 transition-colors flex items-center gap-1"
-            >
-              <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" className={`transition-transform ${showSocials ? 'rotate-90' : ''}`}>
-                <path d="M9 5l7 7-7 7" />
-              </svg>
-              Social Links
-            </button>
-            {showSocials && (
-              <div className="grid grid-cols-2 gap-2 mt-2 animate-fade-in">
-                <input value={igUrl} onChange={(e) => setIgUrl(e.target.value)} placeholder="Instagram URL" className={inputClass} />
-                <input value={twitterUrl} onChange={(e) => setTwitterUrl(e.target.value)} placeholder="X / Twitter URL" className={inputClass} />
-                <input value={tiktokUrl} onChange={(e) => setTiktokUrl(e.target.value)} placeholder="TikTok URL" className={inputClass} />
-                <input value={youtubeUrl} onChange={(e) => setYoutubeUrl(e.target.value)} placeholder="YouTube URL" className={inputClass} />
-                <input value={twitchUrl} onChange={(e) => setTwitchUrl(e.target.value)} placeholder="Twitch URL" className={inputClass} />
-                <input value={kickUrl} onChange={(e) => setKickUrl(e.target.value)} placeholder="Kick URL" className={inputClass} />
+          <div className="space-y-1.5">
+            <p className={labelClass}>Social Links</p>
+            <div className="flex gap-1.5">
+              {[
+                { key: 'twitch', title: 'Twitch', active: openSocials.has('twitch'), color: 'text-purple-500 bg-purple-50 hover:bg-purple-100', icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714z"/></svg> },
+                { key: 'kick', title: 'Kick', active: openSocials.has('kick'), color: 'text-green-500 bg-green-50 hover:bg-green-100', icon: <svg width="14" height="14" viewBox="0 0 250 250" fill="currentColor"><path fillRule="evenodd" clipRule="evenodd" d="M15 90H38.5714V105.698H46.4286V97.8491H54.2857V90H77.8571V113.547H70V121.397H62.1429V129.246H70V137.095H77.8571V160.642H54.2857V152.793H46.4286V144.944H38.5714V160.642H15V90ZM172.143 90H195.714V105.698H203.571V97.8491H211.429V90H235V113.547H227.143V121.397H219.286V129.246H227.143V137.095H235V160.642H211.429V152.793H203.571V144.944H195.714V160.642H172.143V90ZM85.7143 90H109.286V160.642H85.7143V90ZM125 90V97.8491H117.143V152.793H125V160.642H164.286V137.095H140.714V113.547H164.286V90H125Z" /></svg> },
+                { key: 'ig', title: 'Instagram', active: openSocials.has('ig'), color: 'text-pink-500 bg-pink-50 hover:bg-pink-100', icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg> },
+                { key: 'tiktok', title: 'TikTok', active: openSocials.has('tiktok'), color: 'text-zinc-800 bg-zinc-100 hover:bg-zinc-200', icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-2.88 2.5 2.89 2.89 0 01-2.89-2.89 2.89 2.89 0 012.89-2.89c.28 0 .54.04.79.1v-3.5a6.37 6.37 0 00-.79-.05A6.34 6.34 0 003.15 15.2a6.34 6.34 0 0010.86 4.48 6.3 6.3 0 001.86-4.49V8.75a8.26 8.26 0 004.84 1.56V6.84a4.85 4.85 0 01-1.12-.15z"/></svg> },
+                { key: 'twitter', title: 'X / Twitter', active: openSocials.has('twitter'), color: 'text-zinc-700 bg-zinc-100 hover:bg-zinc-200', icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg> },
+                { key: 'youtube', title: 'YouTube', active: openSocials.has('youtube'), color: 'text-red-500 bg-red-50 hover:bg-red-100', icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M23.498 6.186a3.016 3.016 0 00-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 00.502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 002.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 002.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg> },
+              ].map((btn) => (
+                <button
+                  key={btn.key}
+                  type="button"
+                  onClick={() => {
+                    setOpenSocials((prev) => {
+                      const next = new Set(prev);
+                      if (next.has(btn.key)) {
+                        next.delete(btn.key);
+                        if (btn.key === 'twitch') { setTwitchUrl(''); setTwitchFollowers(''); }
+                        if (btn.key === 'kick') { setKickUrl(''); setKickFollowers(''); }
+                        if (btn.key === 'ig') { setIgUrl(''); setIgFollowers(''); }
+                        if (btn.key === 'twitter') { setTwitterUrl(''); setTwitterFollowers(''); }
+                        if (btn.key === 'tiktok') { setTiktokUrl(''); setTiktokFollowers(''); }
+                        if (btn.key === 'youtube') { setYoutubeUrl(''); setYoutubeFollowers(''); }
+                      } else {
+                        next.add(btn.key);
+                      }
+                      return next;
+                    });
+                  }}
+                  className={`w-7 h-7 rounded-lg flex items-center justify-center transition-all ${
+                    btn.active
+                      ? `${btn.color} ring-1 ring-offset-1 ring-current`
+                      : 'text-zinc-400 bg-zinc-100 hover:text-zinc-600 hover:bg-zinc-200'
+                  }`}
+                  title={btn.title}
+                >
+                  <span className="text-sm">{btn.icon}</span>
+                </button>
+              ))}
+            </div>
+            {openSocials.has('twitch') && (
+              <div className="flex gap-1.5 animate-fade-in">
+                <input value={twitchUrl} onChange={(e) => setTwitchUrl(e.target.value)} placeholder="Twitch URL" className="flex-1 text-[10px] bg-white border border-purple-200 rounded px-2 py-1 outline-none placeholder:text-zinc-400" />
+                <input value={twitchFollowers} onChange={(e) => setTwitchFollowers(e.target.value)} placeholder="Followers" className="w-20 text-[10px] bg-white border border-purple-200 rounded px-2 py-1 outline-none placeholder:text-zinc-400 text-right" />
+              </div>
+            )}
+            {openSocials.has('kick') && (
+              <div className="flex gap-1.5 animate-fade-in">
+                <input value={kickUrl} onChange={(e) => setKickUrl(e.target.value)} placeholder="Kick URL" className="flex-1 text-[10px] bg-white border border-green-200 rounded px-2 py-1 outline-none placeholder:text-zinc-400" />
+                <input value={kickFollowers} onChange={(e) => setKickFollowers(e.target.value)} placeholder="Followers" className="w-20 text-[10px] bg-white border border-green-200 rounded px-2 py-1 outline-none placeholder:text-zinc-400 text-right" />
+              </div>
+            )}
+            {openSocials.has('ig') && (
+              <div className="flex gap-1.5 animate-fade-in">
+                <input value={igUrl} onChange={(e) => setIgUrl(e.target.value)} placeholder="Instagram URL" className="flex-1 text-[10px] bg-white border border-pink-200 rounded px-2 py-1 outline-none placeholder:text-zinc-400" />
+                <input value={igFollowers} onChange={(e) => setIgFollowers(e.target.value)} placeholder="Followers" className="w-20 text-[10px] bg-white border border-pink-200 rounded px-2 py-1 outline-none placeholder:text-zinc-400 text-right" />
+              </div>
+            )}
+            {openSocials.has('tiktok') && (
+              <div className="flex gap-1.5 animate-fade-in">
+                <input value={tiktokUrl} onChange={(e) => setTiktokUrl(e.target.value)} placeholder="TikTok URL" className="flex-1 text-[10px] bg-white border border-zinc-300 rounded px-2 py-1 outline-none placeholder:text-zinc-400" />
+                <input value={tiktokFollowers} onChange={(e) => setTiktokFollowers(e.target.value)} placeholder="Followers" className="w-20 text-[10px] bg-white border border-zinc-300 rounded px-2 py-1 outline-none placeholder:text-zinc-400 text-right" />
+              </div>
+            )}
+            {openSocials.has('twitter') && (
+              <div className="flex gap-1.5 animate-fade-in">
+                <input value={twitterUrl} onChange={(e) => setTwitterUrl(e.target.value)} placeholder="X / Twitter URL" className="flex-1 text-[10px] bg-white border border-zinc-300 rounded px-2 py-1 outline-none placeholder:text-zinc-400" />
+                <input value={twitterFollowers} onChange={(e) => setTwitterFollowers(e.target.value)} placeholder="Followers" className="w-20 text-[10px] bg-white border border-zinc-300 rounded px-2 py-1 outline-none placeholder:text-zinc-400 text-right" />
+              </div>
+            )}
+            {openSocials.has('youtube') && (
+              <div className="flex gap-1.5 animate-fade-in">
+                <input value={youtubeUrl} onChange={(e) => setYoutubeUrl(e.target.value)} placeholder="YouTube URL" className="flex-1 text-[10px] bg-white border border-red-200 rounded px-2 py-1 outline-none placeholder:text-zinc-400" />
+                <input value={youtubeFollowers} onChange={(e) => setYoutubeFollowers(e.target.value)} placeholder="Followers" className="w-20 text-[10px] bg-white border border-red-200 rounded px-2 py-1 outline-none placeholder:text-zinc-400 text-right" />
               </div>
             )}
           </div>

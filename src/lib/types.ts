@@ -20,6 +20,10 @@ export type PresetTag = (typeof PRESET_TAGS)[number];
 
 export interface CollabProfile {
   name: string;
+  firstName?: string;
+  lastName?: string;
+  phone?: string;
+  email?: string;
   profilePicUrl?: string;
   twitchUrl?: string;
   twitchFollowers?: string;
@@ -49,6 +53,8 @@ export interface ScratchNote {
   address?: string;
   contact?: string;
   contactName?: string;
+  contactLastName?: string;
+  contactRole?: string;
   contactPhone?: string;
   contactEmail?: string;
   contactNotes?: string;
@@ -66,6 +72,8 @@ export interface CalendarEvent {
   address?: string;
   contact?: string;
   contactName?: string;
+  contactLastName?: string;
+  contactRole?: string;
   contactPhone?: string;
   contactEmail?: string;
   contactNotes?: string;
@@ -87,11 +95,17 @@ export interface Contact {
   company?: string;
   profilePicUrl?: string;
   twitchUrl?: string;
+  twitchFollowers?: string;
   kickUrl?: string;
+  kickFollowers?: string;
   igUrl?: string;
+  igFollowers?: string;
   twitterUrl?: string;
+  twitterFollowers?: string;
   tiktokUrl?: string;
+  tiktokFollowers?: string;
   youtubeUrl?: string;
+  youtubeFollowers?: string;
   notes?: string;
   createdAt: string;
 }

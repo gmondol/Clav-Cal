@@ -274,8 +274,8 @@ export default function DayView({ date, onClose }: DayViewProps) {
                       style={{ top: `${i * 40}px`, height: '40px' }}
                       onClick={() => handleQuickAdd(time)}
                     >
-                      <div className="w-16 text-[10px] text-muted text-right pr-3 pt-0.5 flex-shrink-0 h-full flex items-start justify-end border-r border-border-light border-b border-b-border-light">
-                        <span className="pt-0.5 pr-1">{formatTimeDisplay(time)}</span>
+                      <div className="w-20 text-[10px] text-muted text-right pr-3 flex-shrink-0 h-full flex items-center justify-end border-r border-border-light border-b border-b-border-light">
+                        <span className="pr-1">{formatTimeDisplay(time)}</span>
                       </div>
                       <div className="flex-1 h-full" />
                     </div>
@@ -365,16 +365,7 @@ export default function DayView({ date, onClose }: DayViewProps) {
                         )}
                       </div>
                     </div>
-                    <div className="flex items-center gap-1 mt-1.5">
-                      {statusInfo && (
-                        <span className="text-[9px] px-1.5 py-0.5 rounded-full font-medium" style={{ backgroundColor: statusInfo.color + '20', color: statusInfo.color }}>
-                          {statusInfo.emoji} {statusInfo.label}
-                        </span>
-                      )}
-                      {note.tags.map((t) => (
-                        <TagBadge key={t} tag={t} color={TAG_DEFAULT_COLORS[t]} />
-                      ))}
-                    </div>
+                    
                   </div>
                 );
               })}
