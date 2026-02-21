@@ -46,9 +46,6 @@ export default function DayCell({ date, events, currentMonth, onClick, onEventCl
         >
           {format(date, 'd')}
         </span>
-        {events.length > 0 && (
-          <span className="text-[9px] text-muted">{events.length}</span>
-        )}
       </div>
       <SortableContext items={events.map((e) => e.id)} strategy={verticalListSortingStrategy}>
         <div className="flex flex-col gap-0.5">
