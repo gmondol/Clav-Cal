@@ -101,11 +101,11 @@ export default function ScratchPanel({ searchRef, showFormDefault }: ScratchPane
                 key={tag}
                 onClick={() => setFilterTag(isActive ? null : tag)}
                 className={`text-[10px] px-2 py-0.5 rounded-full font-medium transition-all ${
-                  isActive ? 'ring-1 ring-offset-1' : 'border hover:opacity-80'
+                  isActive ? '' : 'border hover:opacity-80'
                 }`}
                 style={
                   isActive
-                    ? { backgroundColor: tagColor, color: '#fff', ringColor: tagColor }
+                    ? { backgroundColor: tagColor, color: '#fff', boxShadow: `0 0 0 1px ${tagColor}` }
                     : { backgroundColor: tagColor + '18', color: tagColor, borderColor: tagColor + '40' }
                 }
               >

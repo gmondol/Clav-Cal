@@ -112,29 +112,31 @@ export default function EventEditor({
       onSubmit={handleSubmit}
       className="bg-white rounded-xl border border-border p-4 space-y-3 animate-scale-in shadow-lg max-h-[80vh] overflow-y-auto"
     >
-      <div className="flex items-center gap-2">
-        <input
-          autoFocus
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          placeholder="Activity name..."
-          className="flex-1 text-sm font-semibold bg-transparent border-b border-border-light pb-1 outline-none placeholder:text-zinc-300 focus:border-primary/30 transition-colors"
-        />
-        <button
-          type="button"
-          onClick={() => setConfirmed(!confirmed)}
-          className="relative flex items-center flex-shrink-0 rounded-full h-7 transition-colors duration-200"
-          style={{ backgroundColor: confirmed ? '#dcfce7' : '#fee2e2', width: '56px', padding: '2px' }}
-          title={confirmed ? 'Confirmed — click to unconfirm' : 'Not confirmed — click to confirm'}
+      <input
+        autoFocus
+        value={title}
+        onChange={(e) => setTitle(e.target.value)}
+        placeholder="Activity name..."
+        className="w-full text-sm font-semibold bg-transparent border-b border-border-light pb-1 outline-none placeholder:text-zinc-300 focus:border-primary/30 transition-colors"
+      />
+
+      <label
+        className="flex items-center gap-2 cursor-pointer select-none"
+        onClick={() => setConfirmed(!confirmed)}
+      >
+        <span className="text-xs text-muted">Confirmed</span>
+        <div
+          className={`w-4 h-4 rounded border-2 flex items-center justify-center transition-colors ${
+            confirmed ? 'bg-green-500 border-green-500' : 'bg-white border-zinc-300'
+          }`}
         >
-          <span className="absolute left-1.5 text-xs">❌</span>
-          <span className="absolute right-1.5 text-xs">✅</span>
-          <div
-            className="w-6 h-6 rounded-full bg-white shadow-md transition-transform duration-200 z-10"
-            style={{ transform: confirmed ? 'translateX(26px)' : 'translateX(0px)' }}
-          />
-        </button>
-      </div>
+          {confirmed && (
+            <svg width="10" height="10" fill="none" stroke="white" strokeWidth="3" viewBox="0 0 24 24">
+              <path d="M20 6L9 17l-5-5" />
+            </svg>
+          )}
+        </div>
+      </label>
 
       <div className="grid grid-cols-2 gap-2 items-end">
         <div>
@@ -242,9 +244,6 @@ export default function EventEditor({
           disabled={uploading}
           className="w-full text-xs bg-zinc-50 rounded-md border border-dashed border-zinc-300 p-2 text-zinc-400 hover:border-zinc-400 hover:text-zinc-600 transition-colors flex items-center justify-center gap-1.5"
         >
-          <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-            <path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48" />
-          </svg>
           {uploading ? 'Uploading...' : '📎 Attach Files'}
         </button>
         {attachments.length > 0 && (
