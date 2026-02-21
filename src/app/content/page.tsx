@@ -66,9 +66,9 @@ function ContentColumn({
         {status !== 'ready' && (
           <button
             onClick={() => onAddNew(status)}
-            className="w-full p-4 min-h-[7rem] flex items-center justify-center text-[11px] font-semibold text-blue-500 hover:text-blue-600 bg-white border border-dashed border-blue-400 hover:border-blue-500 hover:bg-blue-50 rounded-lg transition-all"
+            className="w-full p-4 min-h-[7rem] flex items-center justify-center text-[11px] font-black uppercase tracking-widest text-blue-500 hover:text-blue-600 bg-white border border-dashed border-blue-400 hover:border-blue-500 hover:bg-blue-50 rounded-lg transition-all"
           >
-            {status === 'workshop' ? '+ Add collab' : '+ Add new content idea'}
+            {status === 'workshop' ? '+ ADD COLLAB' : '+ ADD NEW CONTENT IDEA'}
           </button>
         )}
         {colNotes.map((note) => (
