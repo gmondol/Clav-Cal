@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 
 const STORAGE_KEY = 'clav-cal-auth';
-const SESSION_DAYS = 7;
+const SESSION_DAYS = 1;
 const PASS_HASH = '626f726e746f6d6f67';
 
 function toHex(s: string) {
