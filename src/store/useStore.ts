@@ -1,0 +1,305 @@
+'use client';
+
+import { create } from 'zustand';
+import { format, startOfWeek, endOfWeek } from 'date-fns';
+import {
+  ScratchNote,
+  CalendarEvent,
+  CalendarView,
+  SHOW_TYPE_TEMPLATES,
+} from '@/lib/types';
+import { generateId, generateWeeklySummary } from '@/lib/utils';
+import { supabase } from '@/lib/supabase';
+
+interface StoreState {
+  currentView: CalendarView;
+  selectedDate: string;
+  notes: ScratchNote[];
+  events: CalendarEvent[];
+  usedNoteIds: string[];
+  hasSeenOnboarding: boolean;
+  loaded: boolean;
+
+  setCurrentView: (view: CalendarView) => void;
+  setSelectedDate: (date: string) => void;
+  dismissOnboarding: () => void;
+
+  loadFromSupabase: () => Promise<void>;
+
+  addNote: (note: Omit<ScratchNote, 'id' | 'createdAt'>) => string;
+  updateNote: (id: string, updates: Partial<ScratchNote>) => void;
+  deleteNote: (id: string) => void;
+  archiveNote: (id: string) => void;
+  reorderNotes: (activeId: string, overId: string) => void;
+  loadTemplates: () => void;
+
+  addEvent: (event: Omit<CalendarEvent, 'id'>) => string;
+  updateEvent: (id: string, updates: Partial<CalendarEvent>) => void;
+  deleteEvent: (id: string) => void;
+  moveEvent: (id: string, newDate: string) => void;
+  reorderEventsInDay: (activeId: string, overId: string) => void;
+
+  scheduleNoteAsEvent: (noteId: string, date: string, startTime?: string) => string;
+  exportWeeklySummary: () => string;
+  loadSeedData: () => void;
+}
+
+function noteToRow(note: ScratchNote) {
+  return {
+    id: note.id,
+    title: note.title,
+    color: note.color,
+    tags: note.tags,
+    created_at: note.createdAt,
+    archived: note.archived,
+    description: note.description ?? null,
+    keep_in_scratch: note.keepInScratch ?? false,
+    complexity: note.complexity ?? null,
+    status: note.status ?? 'idea',
+  };
+}
+
+function rowToNote(row: Record<string, unknown>): ScratchNote {
+  return {
+    id: row.id as string,
+    title: row.title as string,
+    color: row.color as string,
+    tags: (row.tags as string[]) ?? [],
+    createdAt: row.created_at as string,
+    archived: row.archived as boolean,
+    description: (row.description as string) ?? undefined,
+    keepInScratch: (row.keep_in_scratch as boolean) ?? undefined,
+    complexity: (row.complexity as ScratchNote['complexity']) ?? undefined,
+    status: (row.status as ScratchNote['status']) ?? 'idea',
+  };
+}
+
+function eventToRow(event: CalendarEvent) {
+  return {
+    id: event.id,
+    date: event.date,
+    start_time: event.startTime,
+    end_time: event.endTime,
+    title: event.title,
+    color: event.color,
+    address: event.address ?? null,
+    contact: event.contact ?? null,
+    description: event.description ?? null,
+    tags: event.tags,
+    complexity: event.complexity ?? null,
+    from_note_id: event.fromNoteId ?? null,
+    confirmed: event.confirmed ?? false,
+  };
+}
+
+function rowToEvent(row: Record<string, unknown>): CalendarEvent {
+  return {
+    id: row.id as string,
+    date: row.date as string,
+    startTime: row.start_time as string,
+    endTime: row.end_time as string,
+    title: row.title as string,
+    color: row.color as string,
+    address: (row.address as string) ?? undefined,
+    contact: (row.contact as string) ?? undefined,
+    description: (row.description as string) ?? undefined,
+    tags: (row.tags as string[]) ?? [],
+    complexity: (row.complexity as CalendarEvent['complexity']) ?? undefined,
+    fromNoteId: (row.from_note_id as string) ?? undefined,
+    confirmed: (row.confirmed as boolean) ?? false,
+  };
+}
+
+export const useStore = create<StoreState>()(
+  (set, get) => ({
+    currentView: 'month',
+    selectedDate: format(new Date(), 'yyyy-MM-dd'),
+    notes: [],
+    events: [],
+    usedNoteIds: [],
+    hasSeenOnboarding: true,
+    loaded: false,
+
+    setCurrentView: (view) => set({ currentView: view }),
+    setSelectedDate: (date) => set({ selectedDate: date }),
+    dismissOnboarding: () => set({ hasSeenOnboarding: true }),
+
+    loadFromSupabase: async () => {
+      const [notesRes, eventsRes] = await Promise.all([
+        supabase.from('notes').select('*').order('sort_order', { ascending: true }),
+        supabase.from('events').select('*'),
+      ]);
+      const notes = (notesRes.data ?? []).map(rowToNote);
+      const events = (eventsRes.data ?? []).map(rowToEvent);
+      set({ notes, events, loaded: true });
+    },
+
+    addNote: (note) => {
+      const id = generateId();
+      const full: ScratchNote = { ...note, id, createdAt: new Date().toISOString() };
+      set((s) => ({ notes: [full, ...s.notes] }));
+      supabase.from('notes').insert(noteToRow(full)).then();
+      return id;
+    },
+
+    updateNote: (id, updates) => {
+      set((s) => ({
+        notes: s.notes.map((n) => (n.id === id ? { ...n, ...updates } : n)),
+      }));
+      const row: Record<string, unknown> = {};
+      if (updates.title !== undefined) row.title = updates.title;
+      if (updates.color !== undefined) row.color = updates.color;
+      if (updates.tags !== undefined) row.tags = updates.tags;
+      if (updates.archived !== undefined) row.archived = updates.archived;
+      if (updates.description !== undefined) row.description = updates.description;
+      if (updates.keepInScratch !== undefined) row.keep_in_scratch = updates.keepInScratch;
+      if (updates.complexity !== undefined) row.complexity = updates.complexity;
+      if (updates.status !== undefined) row.status = updates.status;
+      if (Object.keys(row).length > 0) {
+        supabase.from('notes').update(row).eq('id', id).then();
+      }
+    },
+
+    deleteNote: (id) => {
+      set((s) => ({ notes: s.notes.filter((n) => n.id !== id) }));
+      supabase.from('notes').delete().eq('id', id).then();
+    },
+
+    archiveNote: (id) => {
+      const note = get().notes.find((n) => n.id === id);
+      if (!note) return;
+      const newArchived = !note.archived;
+      set((s) => ({
+        notes: s.notes.map((n) => (n.id === id ? { ...n, archived: newArchived } : n)),
+      }));
+      supabase.from('notes').update({ archived: newArchived }).eq('id', id).then();
+    },
+
+    reorderNotes: (activeId, overId) =>
+      set((s) => {
+        const notes = [...s.notes];
+        const oldIndex = notes.findIndex((n) => n.id === activeId);
+        const newIndex = notes.findIndex((n) => n.id === overId);
+        if (oldIndex === -1 || newIndex === -1) return s;
+        const [item] = notes.splice(oldIndex, 1);
+        notes.splice(newIndex, 0, item);
+        notes.forEach((n, i) => {
+          supabase.from('notes').update({ sort_order: i }).eq('id', n.id).then();
+        });
+        return { notes };
+      }),
+
+    loadTemplates: () => {
+      const existing = get().notes;
+      const newNotes = SHOW_TYPE_TEMPLATES.filter(
+        (t) => !existing.some((n) => n.title === t.title && !n.archived)
+      ).map((t) => ({
+        ...t,
+        id: generateId(),
+        createdAt: new Date().toISOString(),
+      }));
+      if (newNotes.length > 0) {
+        set((s) => ({ notes: [...newNotes, ...s.notes] }));
+        newNotes.forEach((n) => {
+          supabase.from('notes').insert(noteToRow(n)).then();
+        });
+      }
+    },
+
+    addEvent: (event) => {
+      const id = generateId();
+      const full: CalendarEvent = { ...event, id };
+      set((s) => ({ events: [...s.events, full] }));
+      supabase.from('events').insert(eventToRow(full)).then();
+      return id;
+    },
+
+    updateEvent: (id, updates) => {
+      set((s) => ({
+        events: s.events.map((e) => (e.id === id ? { ...e, ...updates } : e)),
+      }));
+      const row: Record<string, unknown> = {};
+      if (updates.date !== undefined) row.date = updates.date;
+      if (updates.startTime !== undefined) row.start_time = updates.startTime;
+      if (updates.endTime !== undefined) row.end_time = updates.endTime;
+      if (updates.title !== undefined) row.title = updates.title;
+      if (updates.color !== undefined) row.color = updates.color;
+      if (updates.address !== undefined) row.address = updates.address;
+      if (updates.contact !== undefined) row.contact = updates.contact;
+      if (updates.description !== undefined) row.description = updates.description;
+      if (updates.tags !== undefined) row.tags = updates.tags;
+      if (updates.complexity !== undefined) row.complexity = updates.complexity;
+      if (updates.confirmed !== undefined) row.confirmed = updates.confirmed;
+      if (Object.keys(row).length > 0) {
+        supabase.from('events').update(row).eq('id', id).then();
+      }
+    },
+
+    deleteEvent: (id) => {
+      set((s) => ({ events: s.events.filter((e) => e.id !== id) }));
+      supabase.from('events').delete().eq('id', id).then();
+    },
+
+    moveEvent: (id, newDate) => {
+      set((s) => ({
+        events: s.events.map((e) => (e.id === id ? { ...e, date: newDate } : e)),
+      }));
+      supabase.from('events').update({ date: newDate }).eq('id', id).then();
+    },
+
+    reorderEventsInDay: (activeId, overId) =>
+      set((s) => {
+        const events = [...s.events];
+        const activeEvent = events.find((e) => e.id === activeId);
+        const overEvent = events.find((e) => e.id === overId);
+        if (!activeEvent || !overEvent || activeEvent.date !== overEvent.date) return s;
+        const swapTime = { startTime: activeEvent.startTime, endTime: activeEvent.endTime };
+        const newEvents = events.map((e) => {
+          if (e.id === activeId) return { ...e, startTime: overEvent.startTime, endTime: overEvent.endTime };
+          if (e.id === overId) return { ...e, startTime: swapTime.startTime, endTime: swapTime.endTime };
+          return e;
+        });
+        supabase.from('events').update({ start_time: overEvent.startTime, end_time: overEvent.endTime }).eq('id', activeId).then();
+        supabase.from('events').update({ start_time: swapTime.startTime, end_time: swapTime.endTime }).eq('id', overId).then();
+        return { events: newEvents };
+      }),
+
+    scheduleNoteAsEvent: (noteId, date, startTime = '10:00') => {
+      const note = get().notes.find((n) => n.id === noteId);
+      if (!note) return '';
+      const eventId = generateId();
+      const event: CalendarEvent = {
+        id: eventId,
+        date,
+        startTime,
+        endTime: `${(parseInt(startTime.split(':')[0]) + 1).toString().padStart(2, '0')}:${startTime.split(':')[1]}`,
+        title: note.title,
+        color: note.color,
+        description: note.description,
+        tags: [...note.tags],
+        complexity: note.complexity,
+        fromNoteId: noteId,
+      };
+      set((s) => ({
+        events: [...s.events, event],
+        usedNoteIds: s.usedNoteIds.includes(noteId) ? s.usedNoteIds : [...s.usedNoteIds, noteId],
+        notes: note.keepInScratch ? s.notes : s.notes.filter((n) => n.id !== noteId),
+      }));
+      supabase.from('events').insert(eventToRow(event)).then();
+      if (!note.keepInScratch) {
+        supabase.from('notes').delete().eq('id', noteId).then();
+      }
+      return eventId;
+    },
+
+    exportWeeklySummary: () => {
+      const { events, selectedDate } = get();
+      const date = new Date(selectedDate + 'T00:00:00');
+      const ws = format(startOfWeek(date, { weekStartsOn: 1 }), 'yyyy-MM-dd');
+      const we = format(endOfWeek(date, { weekStartsOn: 1 }), 'yyyy-MM-dd');
+      return generateWeeklySummary(events, ws, we);
+    },
+
+    loadSeedData: () => {},
+  })
+);
