@@ -825,7 +825,7 @@ function CollabEditor({
         className="bg-white rounded-xl border border-border p-4 space-y-3 animate-scale-in shadow-lg max-h-[85vh] overflow-y-auto max-w-lg w-full"
         onClick={(e) => e.stopPropagation()}
       >
-        <h3 className="text-sm font-bold text-foreground">Add collab profile</h3>
+        <h3 className="text-sm font-bold text-foreground uppercase tracking-wider text-center">Add Collab Profile</h3>
         <input
           autoFocus
           value={title}
