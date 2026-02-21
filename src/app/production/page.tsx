@@ -521,7 +521,7 @@ function ItemCard({
 
 /* ━━━ Main Page ━━━ */
 export default function ProductionPage() {
-  const { productionItems, addProductionItem, updateProductionItem, deleteProductionItem, loaded } = useStore();
+  const { productionItems, addProductionItem, updateProductionItem, deleteProductionItem, loaded, loadFromSupabase } = useStore();
   const [currentFolderId, setCurrentFolderId] = useState<string | null>(null);
   const [openItemId, setOpenItemId] = useState<string | null>(null);
   const [showNewMenu, setShowNewMenu] = useState(false);
@@ -529,6 +529,10 @@ export default function ProductionPage() {
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState('');
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!loaded) loadFromSupabase();
+  }, [loaded, loadFromSupabase]);
 
   const masterTodo = productionItems.find((i) => i.id === MASTER_TODO_ID);
   const todoItems: TodoItem[] = (masterTodo?.content?.items as TodoItem[] | undefined) ?? [];
