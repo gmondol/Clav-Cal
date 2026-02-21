@@ -98,12 +98,26 @@ function ContentCard({
 }) {
   const [showMove, setShowMove] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const allNotes = useStore((s) => s.notes);
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: note.id,
     data: { type: 'content-note', note },
   });
 
   const displayColor = (note.tags.length > 0 && TAG_DEFAULT_COLORS[note.tags[0]]) ? TAG_DEFAULT_COLORS[note.tags[0]] : (note.color || '#000000');
+
+  const collabNames: string[] = [];
+  if (note.collabProfiles && note.collabProfiles.length > 0) {
+    note.collabProfiles.forEach((p) => { if (p.name?.trim()) collabNames.push(p.name.trim()); });
+  }
+  if (note.linkedCollabIds && note.linkedCollabIds.length > 0) {
+    note.linkedCollabIds.forEach((id) => {
+      const linked = allNotes.find((n) => n.id === id);
+      if (linked?.collabProfiles) {
+        linked.collabProfiles.forEach((p) => { if (p.name?.trim() && !collabNames.includes(p.name.trim())) collabNames.push(p.name.trim()); });
+      }
+    });
+  }
 
   return (
     <div
@@ -229,6 +243,16 @@ function ContentCard({
           <TagBadge key={tag} tag={tag} color={TAG_DEFAULT_COLORS[tag]} size="sm" />
         ))}
       </div>
+      {collabNames.length > 0 && (
+        <div className="flex items-center gap-1.5 mt-2 pt-2 border-t border-dashed" style={{ borderColor: displayColor + '30' }}>
+          <svg width="10" height="10" fill="none" stroke={displayColor} strokeWidth="2" viewBox="0 0 24 24" className="flex-shrink-0 opacity-60">
+            <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4-4v2" /><circle cx="9" cy="7" r="4" />
+          </svg>
+          <p className="text-[10px] font-medium truncate" style={{ color: displayColor + 'cc' }}>
+            {collabNames.join(' · ')}
+          </p>
+        </div>
+      )}
     </div>
   );
 }
