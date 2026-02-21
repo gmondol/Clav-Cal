@@ -50,14 +50,30 @@ function ContentColumn({
     data: { type: 'content-column', status },
   });
 
+  const [colSearch, setColSearch] = useState('');
+  const filteredNotes = colSearch.trim()
+    ? colNotes.filter((n) => n.title.toLowerCase().includes(colSearch.trim().toLowerCase()) || n.description?.toLowerCase().includes(colSearch.trim().toLowerCase()))
+    : colNotes;
+
   return (
     <div className="flex-1 flex flex-col min-w-0">
-      <div className="flex items-center gap-2 mb-3 px-1">
+      <div className="flex items-center gap-2 mb-1.5 px-1">
         <span className="text-base">{NOTE_STATUSES.find((s) => s.value === status)?.emoji}</span>
         <h2 className="text-sm font-black text-foreground uppercase tracking-widest">{NOTE_STATUSES.find((s) => s.value === status)?.label}</h2>
         <span className="text-[10px] font-semibold text-white bg-blue-500 rounded-full px-1.5 py-0.5">
           {colNotes.length}
         </span>
+      </div>
+      <div className="relative mb-2 px-1">
+        <input
+          value={colSearch}
+          onChange={(e) => setColSearch(e.target.value)}
+          placeholder="Search..."
+          className="w-full text-[11px] bg-zinc-50 rounded-md border border-border-light py-1.5 pl-7 pr-2 outline-none placeholder:text-zinc-400 focus:border-blue-400 transition-colors"
+        />
+        <svg className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+          <circle cx="11" cy="11" r="8" /><path d="M21 21l-4.35-4.35" />
+        </svg>
       </div>
       <div
         ref={setNodeRef}
@@ -71,7 +87,7 @@ function ContentColumn({
             {status === 'workshop' ? '+ ADD COLLAB' : '+ ADD NEW CONTENT IDEA'}
           </button>
         )}
-        {colNotes.map((note) => (
+        {filteredNotes.map((note) => (
           <ContentCard
             key={note.id}
             note={note}
@@ -1120,6 +1136,7 @@ export default function ContentPage() {
   const [navOpen, setNavOpen] = useState(false);
   const [showContentExport, setShowContentExport] = useState(false);
   const [showContacts, setShowContacts] = useState(false);
+  const [usedSearch, setUsedSearch] = useState('');
   const chatEndRef = useRef<HTMLDivElement>(null);
   const navRef = useRef<HTMLDivElement>(null);
   const pathname = usePathname();
@@ -1333,18 +1350,29 @@ export default function ContentPage() {
 
         {/* Used Content Column */}
         <div className="flex-1 flex flex-col min-w-0">
-          <div className="flex items-center gap-2 mb-3 px-1">
+          <div className="flex items-center gap-2 mb-1.5 px-1">
             <span className="text-base">📋</span>
             <h2 className="text-sm font-black text-foreground uppercase tracking-widest">Used</h2>
             <span className="text-[10px] font-semibold text-white bg-blue-500 rounded-full px-1.5 py-0.5">
               {getNotesForStatus('used').length}
             </span>
           </div>
+          <div className="relative mb-2 px-1">
+            <input
+              value={usedSearch}
+              onChange={(e) => setUsedSearch(e.target.value)}
+              placeholder="Search..."
+              className="w-full text-[11px] bg-zinc-50 rounded-md border border-border-light py-1.5 pl-7 pr-2 outline-none placeholder:text-zinc-400 focus:border-blue-400 transition-colors"
+            />
+            <svg className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+              <circle cx="11" cy="11" r="8" /><path d="M21 21l-4.35-4.35" />
+            </svg>
+          </div>
           <div className="flex-1 overflow-y-auto space-y-2.5 bg-zinc-50 border border-border-light rounded-xl p-4">
             {getNotesForStatus('used').length === 0 ? (
               <p className="text-[11px] text-zinc-400 text-center py-8">Scheduled content will appear here</p>
             ) : (
-              getNotesForStatus('used').map((note) => {
+              getNotesForStatus('used').filter((n) => !usedSearch.trim() || n.title.toLowerCase().includes(usedSearch.trim().toLowerCase()) || n.description?.toLowerCase().includes(usedSearch.trim().toLowerCase())).map((note) => {
                 const displayColor = (note.tags.length > 0 && TAG_DEFAULT_COLORS[note.tags[0]]) ? TAG_DEFAULT_COLORS[note.tags[0]] : (note.color || '#000000');
                 return (
                   <div
