@@ -18,13 +18,14 @@ export default function NoteCard({ note, onEdit, onArchive, onDelete }: NoteCard
     data: { type: 'scratch-note', note },
   });
 
+  const hasColor = note.color && note.color !== '#000000';
   const mergedStyle: React.CSSProperties = {
     transform: CSS.Transform.toString(transform) ?? undefined,
     transition: transition ?? undefined,
     opacity: isDragging ? 0.4 : 1,
-    backgroundColor: note.color + '18',
+    backgroundColor: hasColor ? note.color + '18' : '#ffffff',
     color: note.color,
-    borderLeft: `3px solid ${note.color}`,
+    borderLeft: `3px solid ${hasColor ? note.color : '#d4d4d8'}`,
   };
 
   return (

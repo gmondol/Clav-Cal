@@ -63,6 +63,7 @@ function noteToRow(note: ScratchNote) {
     complexity: note.complexity ?? null,
     status: note.status ?? 'idea',
     address: note.address ?? null,
+    contact: note.contact ?? null,
     attachments: note.attachments ?? [],
   };
 }
@@ -95,6 +96,7 @@ function rowToNote(row: Record<string, unknown>): ScratchNote {
     complexity: (row.complexity as ScratchNote['complexity']) ?? undefined,
     status: (row.status as ScratchNote['status']) ?? 'idea',
     address: (row.address as string) ?? undefined,
+    contact: (row.contact as string) ?? undefined,
     attachments: (row.attachments as string[]) ?? [],
   };
 }
@@ -192,6 +194,7 @@ export const useStore = create<StoreState>()(
           : (notes || null);
       }
       if (updates.address !== undefined) row.address = updates.address || null;
+      if (updates.contact !== undefined) row.contact = updates.contact || null;
       if (updates.attachments !== undefined) row.attachments = updates.attachments;
       if (Object.keys(row).length > 0) {
         supabase.from('notes').update(row).eq('id', id).then();
@@ -315,6 +318,7 @@ export const useStore = create<StoreState>()(
         title: note.title,
         color: note.color,
         address: note.address,
+        contact: note.contact,
         description: note.description,
         tags: [...note.tags],
         complexity: note.complexity,

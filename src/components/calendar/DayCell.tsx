@@ -32,7 +32,7 @@ export default function DayCell({ date, events, currentMonth, onClick, onEventCl
       onClick={onClick}
       className={`min-h-[120px] border border-border-light p-1 cursor-pointer transition-all duration-150 hover:bg-blue-50/40 ${
         isOver ? 'day-cell-drop-active' : ''
-      } ${today ? 'bg-blue-50 border-blue-300' : inMonth ? 'bg-surface' : 'bg-zinc-50/60'}`}
+      } ${inMonth ? 'bg-surface' : 'bg-zinc-50/60'}`}
     >
       <div className="flex items-center justify-between mb-0.5">
         <span

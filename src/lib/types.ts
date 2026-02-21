@@ -46,6 +46,7 @@ export interface ScratchNote {
   status?: NoteStatus;
   collabProfiles?: CollabProfile[];
   address?: string;
+  contact?: string;
   attachments?: string[];
 }
 

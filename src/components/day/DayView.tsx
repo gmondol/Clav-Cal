@@ -129,7 +129,7 @@ export default function DayView({ date, onClose }: DayViewProps) {
   const conflicts = useMemo(() => getConflictingEvents(dayEvents), [dayEvents]);
 
   const activeNotes = useMemo(
-    () => notes.filter((n) => !n.archived),
+    () => notes.filter((n) => !n.archived && (n.status === 'ready' || n.status === 'workshop')),
     [notes]
   );
 
@@ -188,6 +188,7 @@ export default function DayView({ date, onClose }: DayViewProps) {
       title: note.title,
       color: note.color,
       address: note.address,
+      contact: note.contact,
       description: note.description,
       tags: note.tags,
       confirmed: false,

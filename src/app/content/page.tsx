@@ -106,9 +106,9 @@ function ContentCard({
       ref={setNodeRef}
       {...attributes}
       {...listeners}
-      className={`bg-white border border-border-light rounded-lg p-4 min-h-[7rem] cursor-grab active:cursor-grabbing group hover:shadow-sm transition-shadow ${isDragging ? 'opacity-50' : ''}`}
+      className={`bg-white rounded-lg p-4 min-h-[7rem] cursor-grab active:cursor-grabbing group hover:shadow-sm transition-shadow ${isDragging ? 'opacity-50' : ''}`}
       style={{
-        borderLeft: `3px solid ${note.color}`,
+        border: `1.5px solid ${note.color || '#d4d4d8'}`,
       }}
       onClick={(e) => {
         e.stopPropagation();
@@ -135,30 +135,21 @@ function ContentCard({
           </h4>
         </div>
         <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" onClick={(e) => e.stopPropagation()} onPointerDown={(e) => e.stopPropagation()}>
-          <div className="relative">
+          {note.status !== 'ready' && (
             <button
-              onClick={() => setShowMove(!showMove)}
-              className="p-1 rounded hover:bg-white/50 text-zinc-400 hover:text-zinc-600 transition-colors"
-              title="Move"
+              onClick={() => onMove('ready')}
+              className="p-1 rounded hover:bg-green-50 text-zinc-400 hover:text-green-600 transition-colors"
+              title="Move to Approved"
             >
               <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                <path d="M5 12h14M12 5l7 7-7 7" />
+                {note.status === 'workshop' ? (
+                  <path d="M19 12H5M12 19l-7-7 7-7" />
+                ) : (
+                  <path d="M5 12h14M12 5l7 7-7 7" />
+                )}
               </svg>
             </button>
-            {showMove && (
-              <div className="absolute right-0 top-full mt-1 bg-white rounded-lg border border-border shadow-lg p-1.5 z-10 min-w-[120px]">
-                {NOTE_STATUSES.filter((s) => s.value !== note.status).map((s) => (
-                  <button
-                    key={s.value}
-                    onClick={() => { onMove(s.value); setShowMove(false); }}
-                    className="w-full text-left text-[11px] px-2 py-1 rounded hover:bg-zinc-50 transition-colors flex items-center gap-1.5"
-                  >
-                    <span>{s.emoji}</span> {s.label}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
+          )}
           <button
             onClick={onDelete}
             className="p-1 rounded hover:bg-red-50 text-zinc-400 hover:text-red-500 transition-colors"
@@ -214,6 +205,7 @@ function NoteEditor({
   const [tags, setTags] = useState<string[]>(note?.tags ?? []);
   const [showTagPicker, setShowTagPicker] = useState(false);
   const [address, setAddress] = useState(note?.address ?? '');
+  const [contact, setContact] = useState(note?.contact ?? '');
   const [attachments, setAttachments] = useState<string[]>(note?.attachments ?? []);
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -245,9 +237,12 @@ function NoteEditor({
 
   const toggleTag = (tag: string) => {
     const wasActive = tags.includes(tag);
-    setTags((prev) => (wasActive ? prev.filter((t) => t !== tag) : [...prev, tag]));
-    if (!wasActive && TAG_DEFAULT_COLORS[tag]) {
-      setColor(TAG_DEFAULT_COLORS[tag]);
+    if (wasActive) {
+      setTags([]);
+      setColor('#000000');
+    } else {
+      setTags([tag]);
+      if (TAG_DEFAULT_COLORS[tag]) setColor(TAG_DEFAULT_COLORS[tag]);
     }
   };
 
@@ -262,6 +257,7 @@ function NoteEditor({
       status,
       archived: false,
       address: address.trim() || undefined,
+      contact: contact.trim() || undefined,
       attachments,
     });
   };
@@ -281,6 +277,31 @@ function NoteEditor({
           className="w-full text-sm font-semibold bg-transparent border-b border-border-light pb-1 outline-none placeholder:text-zinc-300 focus:border-primary/30 transition-colors"
         />
 
+        <div>
+          <label className="text-[10px] font-semibold text-muted uppercase tracking-wider mb-1 block">Tag</label>
+          <div className="flex flex-wrap gap-1.5">
+            {PRESET_TAGS.map((tag) => {
+              const isActive = tags.includes(tag);
+              const tagColor = TAG_DEFAULT_COLORS[tag];
+              return (
+                <button
+                  key={tag}
+                  type="button"
+                  onClick={() => toggleTag(tag)}
+                  className="text-[10px] px-2 py-0.5 rounded-full font-medium transition-all cursor-pointer"
+                  style={
+                    isActive
+                      ? { backgroundColor: tagColor, color: '#fff', boxShadow: `0 0 0 1px ${tagColor}` }
+                      : { backgroundColor: tagColor + '15', color: tagColor, opacity: 0.45 }
+                  }
+                >
+                  {tag}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
         <textarea
           value={description}
           onChange={(e) => setDescription(e.target.value)}
@@ -297,6 +318,13 @@ function NoteEditor({
               placeholder="📍 Address (optional)"
               rows={2}
               className="w-full text-xs bg-zinc-50 rounded-md border border-border-light p-2 outline-none resize-none placeholder:text-zinc-300 focus:border-primary/30"
+            />
+
+            <input
+              value={contact}
+              onChange={(e) => setContact(e.target.value)}
+              placeholder="👤 Point of Contact (optional)"
+              className="w-full text-xs bg-zinc-50 rounded-md border border-border-light p-2 outline-none placeholder:text-zinc-300 focus:border-primary/30"
             />
 
             <div>
@@ -335,47 +363,6 @@ function NoteEditor({
             </div>
           </>
         )}
-
-        <div>
-          <label className="text-[10px] font-semibold text-muted uppercase tracking-wider mb-1 block">Tag</label>
-          <div className="flex flex-wrap gap-1.5">
-            {tags.map((tag) => (
-              <TagBadge
-                key={tag}
-                tag={tag}
-                color={TAG_DEFAULT_COLORS[tag]}
-                active
-                onClick={() => toggleTag(tag)}
-                size="sm"
-              />
-            ))}
-            <div className="relative">
-              <button
-                type="button"
-                onClick={() => setShowTagPicker(!showTagPicker)}
-                className="text-[9px] px-1.5 py-0.5 rounded-full border border-dashed border-blue-500 text-blue-500 hover:bg-blue-50 transition-colors font-medium"
-              >
-                + Add Tag
-              </button>
-              {showTagPicker && (
-                <div className="absolute top-full left-0 mt-1 bg-white rounded-lg border border-border shadow-lg p-2 z-10 flex flex-wrap gap-1.5 min-w-[160px]">
-                  {PRESET_TAGS.filter((t) => !tags.includes(t)).map((tag) => (
-                    <TagBadge
-                      key={tag}
-                      tag={tag}
-                      color={TAG_DEFAULT_COLORS[tag]}
-                      onClick={() => { toggleTag(tag); setShowTagPicker(false); }}
-                      size="sm"
-                    />
-                  ))}
-                  {PRESET_TAGS.filter((t) => !tags.includes(t)).length === 0 && (
-                    <span className="text-[10px] text-muted">All tags added</span>
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
 
         <div className="flex gap-2 pt-1">
           <button
@@ -559,7 +546,7 @@ function CollabEditor({
     const payload: Parameters<typeof onSave>[0] = {
       title: displayTitle,
       color,
-      tags,
+      tags: ['Collab'],
       description: notes.trim() || undefined,
       collabProfiles: valid,
       archived: false,
@@ -722,6 +709,7 @@ export default function ContentPage() {
         : overData.type === 'content-note' && overData.note ? (overData.note.status ?? 'idea')
         : null;
       if (!targetStatus || activeData.note.status === targetStatus) return;
+      if (targetStatus !== 'ready') return;
       updateNote(activeData.note.id, { status: targetStatus });
     },
     [updateNote]
@@ -956,7 +944,7 @@ export default function ContentPage() {
         </div>
       </div>
 
-      {(showNewForm || editingNote) && (newFormStatus === 'workshop' || (editingNote?.collabProfiles?.length ?? 0) > 0) ? (
+      {(showNewForm || editingNote) && (newFormStatus === 'workshop' || (editingNote?.status === 'workshop' && (editingNote?.collabProfiles?.length ?? 0) > 0)) ? (
         <CollabEditor
           note={editingNote ?? undefined}
           onSave={handleSave as (data: Partial<ScratchNote> & { title: string; color: string; collabProfiles: CollabProfile[] }) => void}

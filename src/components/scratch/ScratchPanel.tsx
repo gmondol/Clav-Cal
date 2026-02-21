@@ -24,6 +24,8 @@ export default function ScratchPanel({ searchRef, showFormDefault }: ScratchPane
 
   const filteredNotes = notes.filter((n) => {
     if (!showArchived && n.archived) return false;
+    const status = n.status ?? 'idea';
+    if (status === 'idea') return false;
     if (search && !n.title.toLowerCase().includes(search.toLowerCase())) return false;
     if (filterTag && !n.tags.includes(filterTag)) return false;
     
