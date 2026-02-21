@@ -503,26 +503,47 @@ function NoteEditor({
               </button>
             </div>
           )}
-          {showManageTags && customTags.length > 0 && (
-            <div className="mt-2 space-y-1 p-2 bg-zinc-50 rounded-lg border border-border-light">
-              {customTags.map((ct) => (
-                <div key={ct.name} className="flex items-center gap-2">
-                  {editingTag === ct.name ? (
-                    <>
-                      <input
-                        type="color"
-                        value={editTagColor}
-                        onChange={(e) => setEditTagColor(e.target.value)}
-                        className="w-5 h-5 rounded cursor-pointer border-0 p-0 flex-shrink-0"
-                      />
-                      <input
-                        autoFocus
-                        value={editTagName}
-                        onChange={(e) => setEditTagName(e.target.value)}
-                        className="flex-1 text-[11px] bg-white border border-border-light rounded px-2 py-1 outline-none focus:border-blue-400"
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') {
-                            e.preventDefault();
+          {showManageTags && (() => {
+            const allTags = [
+              ...PRESET_TAGS.map((name) => ({ name, color: TAG_DEFAULT_COLORS[name] ?? '#3b82f6' })),
+              ...customTags.filter((ct) => !PRESET_TAGS.includes(ct.name as typeof PRESET_TAGS[number])),
+            ];
+            return allTags.length > 0 ? (
+              <div className="mt-2 space-y-1 p-2 bg-zinc-50 rounded-lg border border-border-light">
+                {allTags.map((ct) => (
+                  <div key={ct.name} className="flex items-center gap-2">
+                    {editingTag === ct.name ? (
+                      <>
+                        <input
+                          type="color"
+                          value={editTagColor}
+                          onChange={(e) => setEditTagColor(e.target.value)}
+                          className="w-5 h-5 rounded cursor-pointer border-0 p-0 flex-shrink-0"
+                        />
+                        <input
+                          autoFocus
+                          value={editTagName}
+                          onChange={(e) => setEditTagName(e.target.value)}
+                          className="flex-1 text-[11px] bg-white border border-border-light rounded px-2 py-1 outline-none focus:border-blue-400"
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              if (editTagName.trim()) {
+                                removeCustomTag(ct.name);
+                                delete TAG_DEFAULT_COLORS[ct.name];
+                                addCustomTag({ name: editTagName.trim(), color: editTagColor });
+                                TAG_DEFAULT_COLORS[editTagName.trim()] = editTagColor;
+                                if (tags.includes(ct.name)) setTags(tags.map((t) => t === ct.name ? editTagName.trim() : t));
+                                setEditingTag(null);
+                              }
+                            } else if (e.key === 'Escape') {
+                              setEditingTag(null);
+                            }
+                          }}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
                             if (editTagName.trim()) {
                               removeCustomTag(ct.name);
                               delete TAG_DEFAULT_COLORS[ct.name];
@@ -531,61 +552,46 @@ function NoteEditor({
                               if (tags.includes(ct.name)) setTags(tags.map((t) => t === ct.name ? editTagName.trim() : t));
                               setEditingTag(null);
                             }
-                          } else if (e.key === 'Escape') {
-                            setEditingTag(null);
-                          }
-                        }}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (editTagName.trim()) {
+                          }}
+                          className="text-[10px] px-1.5 py-0.5 text-blue-500 hover:text-blue-600 font-medium transition-colors"
+                        >
+                          Save
+                        </button>
+                        <button type="button" onClick={() => setEditingTag(null)} className="text-[10px] text-zinc-400 hover:text-zinc-500 transition-colors">
+                          Cancel
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: ct.color }} />
+                        <span className="flex-1 text-[11px] font-medium" style={{ color: ct.color }}>{ct.name}</span>
+                        <button
+                          type="button"
+                          onClick={() => { setEditingTag(ct.name); setEditTagName(ct.name); setEditTagColor(ct.color); }}
+                          className="text-[10px] text-zinc-400 hover:text-blue-500 transition-colors px-1"
+                          title="Edit tag"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
                             removeCustomTag(ct.name);
                             delete TAG_DEFAULT_COLORS[ct.name];
-                            addCustomTag({ name: editTagName.trim(), color: editTagColor });
-                            TAG_DEFAULT_COLORS[editTagName.trim()] = editTagColor;
-                            if (tags.includes(ct.name)) setTags(tags.map((t) => t === ct.name ? editTagName.trim() : t));
-                            setEditingTag(null);
-                          }
-                        }}
-                        className="text-[10px] px-1.5 py-0.5 text-blue-500 hover:text-blue-600 font-medium transition-colors"
-                      >
-                        Save
-                      </button>
-                      <button type="button" onClick={() => setEditingTag(null)} className="text-[10px] text-zinc-400 hover:text-zinc-500 transition-colors">
-                        Cancel
-                      </button>
-                    </>
-                  ) : (
-                    <>
-                      <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: ct.color }} />
-                      <span className="flex-1 text-[11px] font-medium" style={{ color: ct.color }}>{ct.name}</span>
-                      <button
-                        type="button"
-                        onClick={() => { setEditingTag(ct.name); setEditTagName(ct.name); setEditTagColor(ct.color); }}
-                        className="text-[10px] text-zinc-400 hover:text-blue-500 transition-colors px-1"
-                        title="Edit tag"
-                      >
-                        Edit
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          removeCustomTag(ct.name);
-                          delete TAG_DEFAULT_COLORS[ct.name];
-                          if (tags.includes(ct.name)) { setTags([]); setColor('#000000'); }
-                        }}
-                        className="text-[10px] text-zinc-400 hover:text-red-500 transition-colors px-1"
-                        title="Delete tag"
-                      >
-                        Delete
-                      </button>
-                    </>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
+                            if (tags.includes(ct.name)) { setTags([]); setColor('#000000'); }
+                          }}
+                          className="text-[10px] text-zinc-400 hover:text-red-500 transition-colors px-1"
+                          title="Delete tag"
+                        >
+                          Delete
+                        </button>
+                      </>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : null;
+          })()}
         </div>
 
         {/* Attached Collabs */}

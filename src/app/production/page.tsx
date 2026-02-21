@@ -1,7 +1,9 @@
 'use client';
 
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { usePathname } from 'next/navigation';
+import { useStore } from '@/store/useStore';
+import type { ProductionItem, ProductionItemType } from '@/lib/types';
 
 const NAV_ITEMS = [
   { href: '/', accent: 'Clav', rest: 'StreamSchedule' },
@@ -9,577 +11,570 @@ const NAV_ITEMS = [
   { href: '/production', accent: 'Production', rest: 'Hub' },
 ] as const;
 
-type TaskStatus = 'todo' | 'in_progress' | 'done';
-type BlockType = 'checklist' | 'notes' | 'options' | 'gallery';
-
-interface ChecklistItem {
-  id: string;
-  text: string;
-  done: boolean;
-}
-
-interface OptionItem {
-  id: string;
-  label: string;
-  detail?: string;
-  selected?: boolean;
-}
-
-interface TaskBlock {
-  id: string;
-  type: BlockType;
-  title: string;
-  checklist?: ChecklistItem[];
-  notes?: string;
-  options?: OptionItem[];
-  images?: string[];
-}
-
-interface Task {
-  id: string;
-  title: string;
-  status: TaskStatus;
-  color: string;
-  blocks: TaskBlock[];
-  notes: string;
-  createdAt: string;
-}
-
-const STATUS_CONFIG: Record<TaskStatus, { label: string; emoji: string; bg: string }> = {
-  todo: { label: 'To Do', emoji: '📋', bg: 'bg-zinc-50' },
-  in_progress: { label: 'In Progress', emoji: '🔨', bg: 'bg-blue-50' },
-  done: { label: 'Done', emoji: '✅', bg: 'bg-green-50' },
+const TYPE_META: Record<ProductionItemType, { label: string; defaultIcon: string }> = {
+  folder:    { label: 'Folder',    defaultIcon: '📁' },
+  note:      { label: 'Note',      defaultIcon: '📄' },
+  checklist: { label: 'Checklist', defaultIcon: '✅' },
+  sheet:     { label: 'Sheet',     defaultIcon: '📊' },
+  gallery:   { label: 'Gallery',   defaultIcon: '🖼️' },
 };
 
-const COLORS = ['#3b82f6', '#8b5cf6', '#f43f5e', '#10b981', '#f59e0b', '#ec4899', '#06b6d4', '#000000'];
+const ITEM_COLORS = ['#3b82f6', '#8b5cf6', '#f43f5e', '#10b981', '#f59e0b', '#ec4899', '#06b6d4', '#64748b'];
 
 function uid() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 }
 
-function loadTasks(): Task[] {
-  if (typeof window === 'undefined') return [];
-  try { return JSON.parse(localStorage.getItem('clav-tasks') || '[]'); } catch { return []; }
+/* ━━━ Breadcrumb Path Builder ━━━ */
+function buildPath(items: ProductionItem[], folderId: string | null): { id: string | null; title: string }[] {
+  const crumbs: { id: string | null; title: string }[] = [{ id: null, title: 'Home' }];
+  if (!folderId) return crumbs;
+  const chain: ProductionItem[] = [];
+  let cur: string | null = folderId;
+  while (cur) {
+    const item = items.find((i) => i.id === cur);
+    if (!item) break;
+    chain.unshift(item);
+    cur = item.parentId;
+  }
+  return [...crumbs, ...chain.map((i) => ({ id: i.id, title: i.title }))];
 }
 
-function saveTasks(tasks: Task[]) {
-  localStorage.setItem('clav-tasks', JSON.stringify(tasks));
+/* ━━━ Note Editor ━━━ */
+function NoteContent({ content, onChange }: { content: Record<string, unknown>; onChange: (c: Record<string, unknown>) => void }) {
+  const [text, setText] = useState((content.text as string) ?? '');
+  const handleChange = (val: string) => { setText(val); onChange({ text: val }); };
+  return (
+    <textarea
+      autoFocus
+      value={text}
+      onChange={(e) => handleChange(e.target.value)}
+      placeholder="Start writing..."
+      className="w-full flex-1 p-6 text-sm leading-relaxed resize-none outline-none bg-transparent font-[inherit]"
+    />
+  );
 }
 
-function TaskEditor({
-  task,
-  onSave,
-  onCancel,
-  onDelete,
-}: {
-  task?: Task;
-  onSave: (t: Task) => void;
-  onCancel: () => void;
-  onDelete?: () => void;
-}) {
-  const [title, setTitle] = useState(task?.title ?? '');
-  const [color, setColor] = useState(task?.color ?? '#3b82f6');
-  const [notes, setNotes] = useState(task?.notes ?? '');
-  const [blocks, setBlocks] = useState<TaskBlock[]>(task?.blocks ?? []);
-  const [showAddBlock, setShowAddBlock] = useState(false);
+/* ━━━ Checklist Editor ━━━ */
+function ChecklistContent({ content, onChange }: { content: Record<string, unknown>; onChange: (c: Record<string, unknown>) => void }) {
+  type Item = { id: string; text: string; done: boolean };
+  const [items, setItems] = useState<Item[]>((content.items as Item[]) ?? []);
+  const [newText, setNewText] = useState('');
 
-  const addBlock = (type: BlockType) => {
-    const block: TaskBlock = {
-      id: uid(),
-      type,
-      title: type === 'checklist' ? 'Checklist' : type === 'notes' ? 'Notes' : type === 'options' ? 'Options' : 'Gallery',
-      ...(type === 'checklist' ? { checklist: [] } : {}),
-      ...(type === 'notes' ? { notes: '' } : {}),
-      ...(type === 'options' ? { options: [] } : {}),
-      ...(type === 'gallery' ? { images: [] } : {}),
-    };
-    setBlocks((prev) => [...prev, block]);
-    setShowAddBlock(false);
+  const sync = (next: Item[]) => { setItems(next); onChange({ items: next }); };
+  const toggle = (id: string) => sync(items.map((i) => i.id === id ? { ...i, done: !i.done } : i));
+  const remove = (id: string) => sync(items.filter((i) => i.id !== id));
+  const updateText = (id: string, text: string) => sync(items.map((i) => i.id === id ? { ...i, text } : i));
+  const addItem = () => {
+    if (!newText.trim()) return;
+    sync([...items, { id: uid(), text: newText.trim(), done: false }]);
+    setNewText('');
   };
 
-  const updateBlock = (blockId: string, updates: Partial<TaskBlock>) => {
-    setBlocks((prev) => prev.map((b) => b.id === blockId ? { ...b, ...updates } : b));
-  };
+  const doneCount = items.filter((i) => i.done).length;
 
-  const removeBlock = (blockId: string) => {
-    setBlocks((prev) => prev.filter((b) => b.id !== blockId));
-  };
+  return (
+    <div className="p-6 space-y-1">
+      {items.length > 0 && (
+        <div className="flex items-center gap-2 mb-4">
+          <div className="flex-1 h-1.5 bg-zinc-100 rounded-full overflow-hidden">
+            <div className="h-full bg-emerald-500 rounded-full transition-all" style={{ width: `${items.length ? (doneCount / items.length) * 100 : 0}%` }} />
+          </div>
+          <span className="text-[11px] text-zinc-400 font-medium tabular-nums">{doneCount}/{items.length}</span>
+        </div>
+      )}
+      {items.map((item) => (
+        <div key={item.id} className="flex items-center gap-3 group py-1.5 px-2 -mx-2 rounded-lg hover:bg-zinc-50 transition-colors">
+          <button onClick={() => toggle(item.id)} className={`w-5 h-5 rounded-md border-2 flex items-center justify-center flex-shrink-0 transition-colors ${item.done ? 'bg-emerald-500 border-emerald-500 text-white' : 'border-zinc-300 hover:border-emerald-400'}`}>
+            {item.done && <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5" /></svg>}
+          </button>
+          <input
+            value={item.text}
+            onChange={(e) => updateText(item.id, e.target.value)}
+            className={`flex-1 text-sm bg-transparent outline-none ${item.done ? 'line-through text-zinc-400' : 'text-zinc-700'}`}
+          />
+          <button onClick={() => remove(item.id)} className="opacity-0 group-hover:opacity-100 p-1 text-zinc-400 hover:text-red-500 transition-all">
+            <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12" /></svg>
+          </button>
+        </div>
+      ))}
+      <div className="flex items-center gap-3 pt-2">
+        <div className="w-5 h-5 rounded-md border-2 border-dashed border-zinc-200 flex-shrink-0" />
+        <input
+          value={newText}
+          onChange={(e) => setNewText(e.target.value)}
+          onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addItem(); } }}
+          placeholder="Add an item..."
+          className="flex-1 text-sm bg-transparent outline-none placeholder:text-zinc-300"
+        />
+        {newText.trim() && (
+          <button onClick={addItem} className="text-xs text-blue-500 font-medium hover:text-blue-600">Add</button>
+        )}
+      </div>
+    </div>
+  );
+}
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!title.trim()) return;
-    onSave({
-      id: task?.id ?? uid(),
-      title: title.trim(),
-      status: task?.status ?? 'todo',
-      color,
-      blocks,
-      notes: notes.trim(),
-      createdAt: task?.createdAt ?? new Date().toISOString(),
-    });
+/* ━━━ Sheet Editor ━━━ */
+function SheetContent({ content, onChange }: { content: Record<string, unknown>; onChange: (c: Record<string, unknown>) => void }) {
+  const [columns, setColumns] = useState<string[]>((content.columns as string[]) ?? ['Column 1', 'Column 2', 'Column 3']);
+  const [rows, setRows] = useState<string[][]>((content.rows as string[][]) ?? [['', '', '']]);
+
+  const sync = (cols: string[], rws: string[][]) => { setColumns(cols); setRows(rws); onChange({ columns: cols, rows: rws }); };
+
+  const updateCol = (i: number, val: string) => { const c = [...columns]; c[i] = val; sync(c, rows); };
+  const updateCell = (ri: number, ci: number, val: string) => { const r = rows.map((row) => [...row]); r[ri][ci] = val; sync(columns, r); };
+  const addRow = () => sync(columns, [...rows, columns.map(() => '')]);
+  const removeRow = (ri: number) => sync(columns, rows.filter((_, i) => i !== ri));
+  const addCol = () => {
+    const newCols = [...columns, `Column ${columns.length + 1}`];
+    const newRows = rows.map((r) => [...r, '']);
+    sync(newCols, newRows);
+  };
+  const removeCol = (ci: number) => {
+    if (columns.length <= 1) return;
+    sync(columns.filter((_, i) => i !== ci), rows.map((r) => r.filter((_, i) => i !== ci)));
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm animate-fade-in" onMouseDown={(e) => { if (e.target === e.currentTarget) onCancel(); }}>
-      <form
-        onSubmit={handleSubmit}
-        className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[85vh] flex flex-col animate-scale-in mx-2 md:mx-0"
-        onMouseDown={(e) => e.stopPropagation()}
-      >
-        <div className="p-4 border-b border-border-light flex items-center justify-between">
-          <h3 className="text-sm font-bold uppercase tracking-wider">{task ? 'Edit Task' : 'New Task'}</h3>
-          <button type="button" onClick={onCancel} className="p-1.5 rounded-lg hover:bg-red-50 text-zinc-400 hover:text-red-500 transition-colors">
-            <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12" /></svg>
-          </button>
-        </div>
-
-        <div className="flex-1 overflow-y-auto p-4 space-y-3">
-          <input
-            autoFocus
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            placeholder="Task name"
-            className="w-full text-sm font-semibold bg-transparent border-b border-border-light pb-1 outline-none placeholder:text-zinc-300 focus:border-blue-400 transition-colors"
-          />
-
-          <div className="flex gap-1.5">
-            {COLORS.map((c) => (
-              <button
-                key={c}
-                type="button"
-                onClick={() => setColor(c)}
-                className="w-5 h-5 rounded-full transition-transform"
-                style={{ backgroundColor: c, boxShadow: color === c ? `0 0 0 2px white, 0 0 0 3px ${c}` : 'none', transform: color === c ? 'scale(1.15)' : 'scale(1)' }}
-              />
-            ))}
-          </div>
-
-          <textarea
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            placeholder="Notes..."
-            rows={2}
-            className="w-full text-xs bg-zinc-50 rounded-md border border-border-light p-2 outline-none resize-none placeholder:text-zinc-300 focus:border-blue-400"
-          />
-
-          {blocks.map((block) => (
-            <div key={block.id} className="rounded-lg border border-border-light bg-zinc-50/50 overflow-hidden">
-              <div className="flex items-center justify-between px-3 py-1.5 bg-zinc-100/80">
-                <input
-                  value={block.title}
-                  onChange={(e) => updateBlock(block.id, { title: e.target.value })}
-                  className="text-[11px] font-semibold uppercase tracking-wide bg-transparent outline-none flex-1 text-zinc-600"
-                />
-                <button type="button" onClick={() => removeBlock(block.id)} className="text-zinc-400 hover:text-red-500 transition-colors p-0.5">
-                  <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12" /></svg>
-                </button>
-              </div>
-              <div className="p-2.5">
-                {block.type === 'checklist' && (
-                  <ChecklistEditor
-                    items={block.checklist ?? []}
-                    onChange={(items) => updateBlock(block.id, { checklist: items })}
-                  />
-                )}
-                {block.type === 'notes' && (
-                  <textarea
-                    value={block.notes ?? ''}
-                    onChange={(e) => updateBlock(block.id, { notes: e.target.value })}
-                    placeholder="Write notes here..."
-                    rows={3}
-                    className="w-full text-xs bg-white rounded border border-border-light p-2 outline-none resize-none placeholder:text-zinc-300 focus:border-blue-400"
-                  />
-                )}
-                {block.type === 'options' && (
-                  <OptionsEditor
-                    items={block.options ?? []}
-                    onChange={(items) => updateBlock(block.id, { options: items })}
-                  />
-                )}
-                {block.type === 'gallery' && (
-                  <GalleryEditor
-                    images={block.images ?? []}
-                    onChange={(images) => updateBlock(block.id, { images })}
-                  />
-                )}
-              </div>
-            </div>
-          ))}
-
-          <div className="relative">
-            <button
-              type="button"
-              onClick={() => setShowAddBlock(!showAddBlock)}
-              className="w-full text-[11px] py-2 border border-dashed border-blue-400 rounded-lg text-blue-500 hover:bg-blue-50 hover:border-blue-500 font-medium transition-colors"
-            >
-              + Add Block
-            </button>
-            {showAddBlock && (
-              <div className="absolute left-0 right-0 top-full mt-1 bg-white border border-border-light rounded-lg shadow-lg z-10 py-1">
-                {([
-                  { type: 'checklist' as BlockType, label: 'Checklist', icon: '☑️' },
-                  { type: 'notes' as BlockType, label: 'Notes', icon: '📝' },
-                  { type: 'options' as BlockType, label: 'Options Board', icon: '🗂️' },
-                  { type: 'gallery' as BlockType, label: 'Image Gallery', icon: '🖼️' },
-                ]).map(({ type, label, icon }) => (
-                  <button
-                    key={type}
-                    type="button"
-                    onClick={() => addBlock(type)}
-                    className="w-full text-left px-3 py-2 text-xs hover:bg-zinc-50 transition-colors flex items-center gap-2"
-                  >
-                    <span>{icon}</span> {label}
-                  </button>
+    <div className="p-4 overflow-auto flex-1">
+      <div className="inline-block min-w-full">
+        <table className="w-full border-collapse">
+          <thead>
+            <tr>
+              {columns.map((col, i) => (
+                <th key={i} className="border border-zinc-200 bg-zinc-50 px-3 py-2 text-left group relative">
+                  <input value={col} onChange={(e) => updateCol(i, e.target.value)} className="w-full text-xs font-semibold bg-transparent outline-none text-zinc-600 uppercase tracking-wide" />
+                  {columns.length > 1 && (
+                    <button onClick={() => removeCol(i)} className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 text-zinc-400 hover:text-red-500 transition-all">
+                      <svg width="10" height="10" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12" /></svg>
+                    </button>
+                  )}
+                </th>
+              ))}
+              <th className="border border-zinc-200 bg-zinc-50 w-10">
+                <button onClick={addCol} className="w-full py-2 text-zinc-400 hover:text-blue-500 transition-colors text-sm font-bold">+</button>
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row, ri) => (
+              <tr key={ri} className="group">
+                {row.map((cell, ci) => (
+                  <td key={ci} className="border border-zinc-200 px-3 py-2">
+                    <input value={cell} onChange={(e) => updateCell(ri, ci, e.target.value)} className="w-full text-sm bg-transparent outline-none text-zinc-700" />
+                  </td>
                 ))}
-              </div>
-            )}
-          </div>
-        </div>
-
-        <div className="p-4 border-t border-border-light flex items-center justify-between">
-          <div>
-            {onDelete && (
-              <button type="button" onClick={onDelete} className="text-[11px] text-red-400 hover:text-red-600 font-medium transition-colors">
-                Delete Task
-              </button>
-            )}
-          </div>
-          <div className="flex gap-2">
-            <button type="button" onClick={onCancel} className="px-3 py-1.5 text-xs text-zinc-500 hover:text-zinc-700 font-medium transition-colors">
-              Cancel
-            </button>
-            <button type="submit" disabled={!title.trim()} className="px-4 py-1.5 text-xs bg-blue-500 text-white rounded-lg font-medium hover:bg-blue-600 disabled:opacity-40 transition-colors">
-              {task ? 'Save' : 'Create'}
-            </button>
-          </div>
-        </div>
-      </form>
-    </div>
-  );
-}
-
-function ChecklistEditor({ items, onChange }: { items: ChecklistItem[]; onChange: (items: ChecklistItem[]) => void }) {
-  const [newItem, setNewItem] = useState('');
-
-  return (
-    <div className="space-y-1">
-      {items.map((item) => (
-        <div key={item.id} className="flex items-center gap-2 group">
-          <input
-            type="checkbox"
-            checked={item.done}
-            onChange={() => onChange(items.map((i) => i.id === item.id ? { ...i, done: !i.done } : i))}
-            className="rounded border-zinc-300 text-blue-500 cursor-pointer"
-          />
-          <span className={`flex-1 text-xs ${item.done ? 'line-through text-zinc-400' : 'text-zinc-700'}`}>{item.text}</span>
-          <button
-            type="button"
-            onClick={() => onChange(items.filter((i) => i.id !== item.id))}
-            className="opacity-0 group-hover:opacity-100 text-zinc-400 hover:text-red-500 transition-all"
-          >
-            <svg width="10" height="10" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12" /></svg>
-          </button>
-        </div>
-      ))}
-      <div className="flex items-center gap-2 mt-1">
-        <input
-          value={newItem}
-          onChange={(e) => setNewItem(e.target.value)}
-          placeholder="Add item..."
-          className="flex-1 text-xs bg-white border border-border-light rounded px-2 py-1 outline-none placeholder:text-zinc-300 focus:border-blue-400"
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' && newItem.trim()) {
-              e.preventDefault();
-              onChange([...items, { id: uid(), text: newItem.trim(), done: false }]);
-              setNewItem('');
-            }
-          }}
-        />
+                <td className="border border-zinc-200 w-10 text-center">
+                  <button onClick={() => removeRow(ri)} className="opacity-0 group-hover:opacity-100 text-zinc-400 hover:text-red-500 transition-all p-1">
+                    <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12" /></svg>
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
+      <button onClick={addRow} className="mt-2 text-xs text-blue-500 font-medium hover:text-blue-600 transition-colors px-3 py-1.5">
+        + Add row
+      </button>
     </div>
   );
 }
 
-function OptionsEditor({ items, onChange }: { items: OptionItem[]; onChange: (items: OptionItem[]) => void }) {
-  const [newLabel, setNewLabel] = useState('');
-
-  return (
-    <div className="space-y-1">
-      {items.map((item) => (
-        <div key={item.id} className="flex items-center gap-2 group p-1.5 rounded-md hover:bg-white transition-colors">
-          <button
-            type="button"
-            onClick={() => onChange(items.map((i) => i.id === item.id ? { ...i, selected: !i.selected } : i))}
-            className={`w-4 h-4 rounded-full border-2 flex-shrink-0 transition-colors ${item.selected ? 'bg-blue-500 border-blue-500' : 'border-zinc-300'}`}
-          />
-          <div className="flex-1 min-w-0">
-            <span className={`text-xs font-medium ${item.selected ? 'text-blue-600' : 'text-zinc-700'}`}>{item.label}</span>
-            {item.detail && <p className="text-[10px] text-zinc-400 truncate">{item.detail}</p>}
-          </div>
-          <button
-            type="button"
-            onClick={() => onChange(items.filter((i) => i.id !== item.id))}
-            className="opacity-0 group-hover:opacity-100 text-zinc-400 hover:text-red-500 transition-all"
-          >
-            <svg width="10" height="10" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12" /></svg>
-          </button>
-        </div>
-      ))}
-      <div className="flex items-center gap-2 mt-1">
-        <input
-          value={newLabel}
-          onChange={(e) => setNewLabel(e.target.value)}
-          placeholder="Add option..."
-          className="flex-1 text-xs bg-white border border-border-light rounded px-2 py-1 outline-none placeholder:text-zinc-300 focus:border-blue-400"
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' && newLabel.trim()) {
-              e.preventDefault();
-              onChange([...items, { id: uid(), label: newLabel.trim() }]);
-              setNewLabel('');
-            }
-          }}
-        />
-      </div>
-    </div>
-  );
-}
-
-function GalleryEditor({ images, onChange }: { images: string[]; onChange: (images: string[]) => void }) {
+/* ━━━ Gallery Editor ━━━ */
+function GalleryContent({ content, onChange }: { content: Record<string, unknown>; onChange: (c: Record<string, unknown>) => void }) {
+  type Img = { id: string; url: string; caption?: string };
+  const [images, setImages] = useState<Img[]>((content.images as Img[]) ?? []);
   const [newUrl, setNewUrl] = useState('');
 
+  const sync = (next: Img[]) => { setImages(next); onChange({ images: next }); };
+  const addImage = () => {
+    if (!newUrl.trim()) return;
+    sync([...images, { id: uid(), url: newUrl.trim() }]);
+    setNewUrl('');
+  };
+  const removeImage = (id: string) => sync(images.filter((i) => i.id !== id));
+  const updateCaption = (id: string, caption: string) => sync(images.map((i) => i.id === id ? { ...i, caption } : i));
+
   return (
-    <div>
+    <div className="p-6 space-y-4 flex-1 overflow-auto">
       {images.length > 0 && (
-        <div className="grid grid-cols-3 gap-1.5 mb-2">
-          {images.map((url, i) => (
-            <div key={i} className="relative group aspect-square rounded-md overflow-hidden bg-zinc-200">
-              <img src={url} alt="" className="w-full h-full object-cover" />
-              <button
-                type="button"
-                onClick={() => onChange(images.filter((_, idx) => idx !== i))}
-                className="absolute top-0.5 right-0.5 w-4 h-4 bg-black/60 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-              >
-                <svg width="8" height="8" fill="none" stroke="white" strokeWidth="2" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12" /></svg>
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+          {images.map((img) => (
+            <div key={img.id} className="group relative">
+              <div className="aspect-square rounded-xl overflow-hidden bg-zinc-100 border border-zinc-200">
+                <img src={img.url} alt={img.caption || ''} className="w-full h-full object-cover" />
+              </div>
+              <button onClick={() => removeImage(img.id)} className="absolute top-2 right-2 w-6 h-6 bg-black/60 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                <svg width="10" height="10" fill="none" stroke="white" strokeWidth="2.5" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12" /></svg>
               </button>
+              <input
+                value={img.caption ?? ''}
+                onChange={(e) => updateCaption(img.id, e.target.value)}
+                placeholder="Caption..."
+                className="mt-1.5 w-full text-[11px] text-zinc-500 bg-transparent outline-none placeholder:text-zinc-300"
+              />
             </div>
           ))}
         </div>
       )}
-      <div className="flex items-center gap-2">
+      {images.length === 0 && (
+        <div className="flex flex-col items-center justify-center py-16 text-zinc-300">
+          <span className="text-4xl mb-3">🖼️</span>
+          <p className="text-sm">No images yet</p>
+        </div>
+      )}
+      <div className="flex items-center gap-2 pt-2">
         <input
           value={newUrl}
           onChange={(e) => setNewUrl(e.target.value)}
+          onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addImage(); } }}
           placeholder="Paste image URL..."
-          className="flex-1 text-xs bg-white border border-border-light rounded px-2 py-1 outline-none placeholder:text-zinc-300 focus:border-blue-400"
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' && newUrl.trim()) {
-              e.preventDefault();
-              onChange([...images, newUrl.trim()]);
-              setNewUrl('');
-            }
-          }}
+          className="flex-1 text-sm bg-zinc-50 border border-zinc-200 rounded-lg px-3 py-2 outline-none placeholder:text-zinc-300 focus:border-blue-400 transition-colors"
         />
+        <button onClick={addImage} disabled={!newUrl.trim()} className="px-4 py-2 text-xs bg-blue-500 text-white rounded-lg font-medium hover:bg-blue-600 disabled:opacity-40 transition-colors">
+          Add
+        </button>
       </div>
     </div>
   );
 }
 
-function TaskCard({
-  task,
-  onEdit,
-  onStatusChange,
+/* ━━━ Item Card (for folder view) ━━━ */
+function ItemCard({
+  item,
+  onOpen,
+  onDelete,
+  onRename,
 }: {
-  task: Task;
-  onEdit: () => void;
-  onStatusChange: (status: TaskStatus) => void;
+  item: ProductionItem;
+  onOpen: () => void;
+  onDelete: () => void;
+  onRename: () => void;
 }) {
-  const completedCount = task.blocks.reduce((acc, b) => {
-    if (b.type === 'checklist' && b.checklist) return acc + b.checklist.filter((i) => i.done).length;
-    return acc;
-  }, 0);
-  const totalCount = task.blocks.reduce((acc, b) => {
-    if (b.type === 'checklist' && b.checklist) return acc + b.checklist.length;
-    return acc;
-  }, 0);
+  const [showMenu, setShowMenu] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!showMenu) return;
+    const handle = (e: MouseEvent) => { if (menuRef.current && !menuRef.current.contains(e.target as Node)) setShowMenu(false); };
+    document.addEventListener('mousedown', handle);
+    return () => document.removeEventListener('mousedown', handle);
+  }, [showMenu]);
+
+  const meta = TYPE_META[item.itemType];
+  const preview = item.itemType === 'checklist'
+    ? (() => { const items = (item.content.items as { done: boolean }[]) ?? []; const done = items.filter((i) => i.done).length; return items.length > 0 ? `${done}/${items.length} done` : null; })()
+    : item.itemType === 'note'
+      ? ((item.content.text as string) ?? '').slice(0, 60) || null
+      : item.itemType === 'sheet'
+        ? `${((item.content.rows as unknown[]) ?? []).length} rows`
+        : item.itemType === 'gallery'
+          ? `${((item.content.images as unknown[]) ?? []).length} images`
+          : null;
 
   return (
     <div
-      onClick={onEdit}
-      className="rounded-lg p-3 cursor-pointer group hover:shadow-sm transition-shadow"
-      style={{ border: `1.5px solid ${task.color}`, backgroundColor: task.color + '10' }}
+      onClick={onOpen}
+      className="group bg-white rounded-xl border border-zinc-200 hover:border-zinc-300 hover:shadow-md transition-all cursor-pointer relative overflow-hidden"
     >
-      <div className="flex items-start justify-between gap-2 mb-1">
-        <h4 className="text-sm font-semibold leading-tight" style={{ color: task.color }}>{task.title}</h4>
-        <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" onClick={(e) => e.stopPropagation()}>
-          {task.status !== 'done' && (
+      <div className="h-1 w-full" style={{ backgroundColor: item.color }} />
+      <div className="p-4">
+        <div className="flex items-start justify-between gap-2">
+          <span className="text-2xl">{item.icon}</span>
+          <div className="relative" ref={menuRef}>
             <button
-              onClick={() => onStatusChange(task.status === 'todo' ? 'in_progress' : 'done')}
-              className="p-1 rounded hover:bg-white/80 text-zinc-400 hover:text-green-600 transition-colors"
-              title={task.status === 'todo' ? 'Start' : 'Complete'}
+              onClick={(e) => { e.stopPropagation(); setShowMenu(!showMenu); }}
+              className="p-1 rounded-md opacity-0 group-hover:opacity-100 hover:bg-zinc-100 transition-all text-zinc-400"
             >
-              <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                {task.status === 'todo' ? <path d="M5 12h14M12 5l7 7-7 7" /> : <path d="M20 6L9 17l-5-5" />}
-              </svg>
+              <svg width="14" height="14" fill="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="5" r="1.5" /><circle cx="12" cy="12" r="1.5" /><circle cx="12" cy="19" r="1.5" /></svg>
             </button>
-          )}
-          {task.status === 'done' && (
-            <button
-              onClick={() => onStatusChange('todo')}
-              className="p-1 rounded hover:bg-white/80 text-zinc-400 hover:text-orange-500 transition-colors"
-              title="Reopen"
-            >
-              <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M1 4v6h6M23 20v-6h-6" /><path d="M20.49 9A9 9 0 005.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 013.51 15" /></svg>
-            </button>
-          )}
+            {showMenu && (
+              <div className="absolute right-0 top-full mt-1 bg-white rounded-lg border border-zinc-200 shadow-lg py-1 w-36 z-50" onClick={(e) => e.stopPropagation()}>
+                <button onClick={() => { setShowMenu(false); onRename(); }} className="w-full text-left px-3 py-1.5 text-xs hover:bg-zinc-50 transition-colors flex items-center gap-2">
+                  <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M17 3a2.828 2.828 0 114 4L7.5 20.5 2 22l1.5-5.5L17 3z" /></svg>
+                  Rename
+                </button>
+                <button onClick={() => { setShowMenu(false); onDelete(); }} className="w-full text-left px-3 py-1.5 text-xs text-red-500 hover:bg-red-50 transition-colors flex items-center gap-2">
+                  <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" /></svg>
+                  Delete
+                </button>
+              </div>
+            )}
+          </div>
         </div>
-      </div>
-      {task.notes && <p className="text-[10px] text-zinc-500 leading-snug mb-1.5 line-clamp-2">{task.notes}</p>}
-      <div className="flex items-center gap-2 flex-wrap">
-        {totalCount > 0 && (
-          <span className="text-[10px] text-zinc-400 flex items-center gap-1">
-            <svg width="10" height="10" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5" /></svg>
-            {completedCount}/{totalCount}
-          </span>
-        )}
-        {task.blocks.length > 0 && (
-          <span className="text-[10px] text-zinc-400">
-            {task.blocks.length} block{task.blocks.length !== 1 ? 's' : ''}
-          </span>
-        )}
+        <h3 className="text-sm font-semibold text-zinc-800 mt-3 truncate">{item.title}</h3>
+        <p className="text-[11px] text-zinc-400 mt-1">
+          {meta.label}
+          {preview && <span className="ml-1.5 text-zinc-300">· {preview}</span>}
+        </p>
       </div>
     </div>
   );
 }
 
+/* ━━━ Main Page ━━━ */
 export default function ProductionPage() {
-  const [tasks, setTasks] = useState<Task[]>([]);
-  const [editing, setEditing] = useState<Task | null | 'new'>(null);
+  const { productionItems, addProductionItem, updateProductionItem, deleteProductionItem } = useStore();
+  const [currentFolderId, setCurrentFolderId] = useState<string | null>(null);
+  const [openItemId, setOpenItemId] = useState<string | null>(null);
+  const [showNewMenu, setShowNewMenu] = useState(false);
   const [navOpen, setNavOpen] = useState(false);
+  const [renamingId, setRenamingId] = useState<string | null>(null);
+  const [renameValue, setRenameValue] = useState('');
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+
   const navRef = useRef<HTMLDivElement>(null);
+  const newMenuRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<Record<string, unknown>>({});
   const pathname = usePathname();
 
-  useEffect(() => { setTasks(loadTasks()); }, []);
   useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
+    const handle = (e: MouseEvent) => {
       if (navRef.current && !navRef.current.contains(e.target as Node)) setNavOpen(false);
+      if (newMenuRef.current && !newMenuRef.current.contains(e.target as Node)) setShowNewMenu(false);
     };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener('mousedown', handle);
+    return () => document.removeEventListener('mousedown', handle);
   }, []);
 
-  const saveTask = useCallback((task: Task) => {
-    setTasks((prev) => {
-      const exists = prev.find((t) => t.id === task.id);
-      const next = exists ? prev.map((t) => t.id === task.id ? task : t) : [...prev, task];
-      saveTasks(next);
-      return next;
+  const currentItems = useMemo(() => {
+    const items = productionItems.filter((i) => i.parentId === currentFolderId);
+    const folders = items.filter((i) => i.itemType === 'folder').sort((a, b) => a.sortOrder - b.sortOrder);
+    const files = items.filter((i) => i.itemType !== 'folder').sort((a, b) => a.sortOrder - b.sortOrder);
+    return [...folders, ...files];
+  }, [productionItems, currentFolderId]);
+
+  const openItem = openItemId ? productionItems.find((i) => i.id === openItemId) ?? null : null;
+  const breadcrumb = useMemo(() => buildPath(productionItems, currentFolderId), [productionItems, currentFolderId]);
+
+  const createItem = useCallback((type: ProductionItemType) => {
+    const meta = TYPE_META[type];
+    const defaultContent: Record<string, unknown> =
+      type === 'checklist' ? { items: [] } :
+      type === 'sheet' ? { columns: ['Column 1', 'Column 2', 'Column 3'], rows: [['', '', '']] } :
+      type === 'gallery' ? { images: [] } :
+      {};
+    const id = addProductionItem({
+      parentId: currentFolderId,
+      title: `Untitled ${meta.label}`,
+      itemType: type,
+      icon: meta.defaultIcon,
+      color: ITEM_COLORS[Math.floor(Math.random() * ITEM_COLORS.length)],
+      content: defaultContent,
+      sortOrder: currentItems.length,
     });
-    setEditing(null);
+    setShowNewMenu(false);
+    setRenamingId(id);
+    setRenameValue(`Untitled ${meta.label}`);
+  }, [currentFolderId, currentItems.length, addProductionItem]);
+
+  const handleItemClick = useCallback((item: ProductionItem) => {
+    if (renamingId) return;
+    if (item.itemType === 'folder') {
+      setCurrentFolderId(item.id);
+    } else {
+      contentRef.current = { ...item.content };
+      setOpenItemId(item.id);
+    }
+  }, [renamingId]);
+
+  const handleBack = useCallback(() => {
+    if (openItem) {
+      updateProductionItem(openItem.id, { content: contentRef.current });
+      setOpenItemId(null);
+    }
+  }, [openItem, updateProductionItem]);
+
+  const handleContentChange = useCallback((newContent: Record<string, unknown>) => {
+    contentRef.current = newContent;
   }, []);
 
-  const deleteTask = useCallback((id: string) => {
-    setTasks((prev) => {
-      const next = prev.filter((t) => t.id !== id);
-      saveTasks(next);
-      return next;
-    });
-    setEditing(null);
-  }, []);
+  const handleRenameSubmit = useCallback(() => {
+    if (renamingId && renameValue.trim()) {
+      updateProductionItem(renamingId, { title: renameValue.trim() });
+    }
+    setRenamingId(null);
+    setRenameValue('');
+  }, [renamingId, renameValue, updateProductionItem]);
 
-  const changeStatus = useCallback((id: string, status: TaskStatus) => {
-    setTasks((prev) => {
-      const next = prev.map((t) => t.id === id ? { ...t, status } : t);
-      saveTasks(next);
-      return next;
-    });
-  }, []);
+  const handleDelete = useCallback((id: string) => {
+    const item = productionItems.find((i) => i.id === id);
+    if (item?.itemType === 'folder') {
+      const hasChildren = productionItems.some((i) => i.parentId === id);
+      if (hasChildren) { setDeleteConfirmId(id); return; }
+    }
+    deleteProductionItem(id);
+  }, [productionItems, deleteProductionItem]);
 
-  const columns: TaskStatus[] = ['todo', 'in_progress', 'done'];
+  const confirmDelete = useCallback(() => {
+    if (deleteConfirmId) {
+      deleteProductionItem(deleteConfirmId);
+      setDeleteConfirmId(null);
+    }
+  }, [deleteConfirmId, deleteProductionItem]);
 
   return (
-    <div className="h-screen flex flex-col" style={{ background: '#e8e8eb' }}>
+    <div className="h-screen flex flex-col" style={{ background: '#f5f5f7' }}>
+      {/* ── Header ── */}
       <header className="relative flex items-center px-3 md:px-6 py-2 md:py-3 bg-white" style={{ boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
         <a href="/" className="overflow-hidden flex items-center justify-center flex-shrink-0 w-[60px] h-[32px] md:w-[116px] md:h-[61px]" title="Back to Calendar">
           <img src="/Favicon.png" alt="Clav Cal" className="h-auto scale-125 translate-y-1 w-[84px] md:w-[162px]" />
         </a>
-
         <div ref={navRef} className="absolute left-1/2 -translate-x-1/2">
-          <button
-            onClick={() => setNavOpen((o) => !o)}
-            className="flex items-center gap-1 text-base md:text-2xl font-bold tracking-tight text-black hover:opacity-80 transition-opacity"
-          >
+          <button onClick={() => setNavOpen((o) => !o)} className="flex items-center gap-1 text-base md:text-2xl font-bold tracking-tight text-black hover:opacity-80 transition-opacity">
             <span className="text-blue-500">Production</span> Hub
-            <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" className={`ml-0.5 transition-transform ${navOpen ? 'rotate-180' : ''}`} viewBox="0 0 24 24">
-              <path d="M6 9l6 6 6-6" />
-            </svg>
+            <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" className={`ml-0.5 transition-transform ${navOpen ? 'rotate-180' : ''}`} viewBox="0 0 24 24"><path d="M6 9l6 6 6-6" /></svg>
           </button>
           {navOpen && (() => {
-            const otherPages = NAV_ITEMS.filter((item) => item.href !== pathname);
-            if (otherPages.length === 0) return null;
-            return (
-              <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 bg-white rounded-lg border border-border shadow-lg py-1 min-w-[180px] z-50">
-                {otherPages.map((item) => (
-                  <a
-                    key={item.href}
-                    href={item.href}
-                    onClick={() => setNavOpen(false)}
-                    className="block px-4 py-2 text-xl font-bold tracking-tight whitespace-nowrap hover:bg-zinc-50 transition-colors"
-                  >
+            const others = NAV_ITEMS.filter((i) => i.href !== pathname);
+            return others.length > 0 ? (
+              <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 bg-white rounded-lg border border-zinc-200 shadow-lg py-1 min-w-[180px] z-50">
+                {others.map((item) => (
+                  <a key={item.href} href={item.href} onClick={() => setNavOpen(false)} className="block px-4 py-2 text-xl font-bold tracking-tight whitespace-nowrap hover:bg-zinc-50 transition-colors">
                     <span className="text-blue-500">{item.accent}</span> {item.rest}
                   </a>
                 ))}
               </div>
-            );
+            ) : null;
           })()}
         </div>
       </header>
 
-      <div className="flex-1 overflow-x-auto md:overflow-hidden flex gap-4 p-2 md:p-4">
-        {columns.map((status) => {
-          const col = STATUS_CONFIG[status];
-          const colTasks = tasks.filter((t) => t.status === status);
-          return (
-            <div key={status} className="flex-1 flex flex-col min-w-[260px] md:min-w-0">
-              <div className="flex items-center gap-2 mb-2 px-1">
-                <span className="text-base">{col.emoji}</span>
-                <h2 className="text-sm font-black text-zinc-800 uppercase tracking-widest">{col.label}</h2>
-                <span className="text-[10px] font-semibold text-white bg-blue-500 rounded-full px-1.5 py-0.5">
-                  {colTasks.length}
-                </span>
-              </div>
-              <div className={`flex-1 overflow-y-auto space-y-2 ${col.bg} rounded-xl p-3 border border-border-light`}>
-                {status === 'todo' && (
-                  <button
-                    onClick={() => setEditing('new')}
-                    className="w-full py-3 border-2 border-dashed border-blue-400 rounded-lg text-xs font-semibold text-blue-500 hover:bg-blue-50 hover:border-blue-500 transition-colors"
-                  >
-                    + NEW TASK
-                  </button>
-                )}
-                {colTasks.map((task) => (
-                  <TaskCard
-                    key={task.id}
-                    task={task}
-                    onEdit={() => setEditing(task)}
-                    onStatusChange={(s) => changeStatus(task.id, s)}
-                  />
+      {/* ── Content ── */}
+      <div className="flex-1 flex flex-col overflow-hidden">
+        {openItem ? (
+          /* ━━ Item Editor View ━━ */
+          <div className="flex-1 flex flex-col overflow-hidden">
+            <div className="flex items-center gap-3 px-4 md:px-8 py-3 bg-white border-b border-zinc-200">
+              <button onClick={handleBack} className="p-1.5 rounded-lg hover:bg-zinc-100 text-zinc-500 transition-colors">
+                <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M19 12H5M12 19l-7-7 7-7" /></svg>
+              </button>
+              <span className="text-xl mr-1">{openItem.icon}</span>
+              <input
+                value={openItem.title}
+                onChange={(e) => updateProductionItem(openItem.id, { title: e.target.value })}
+                className="flex-1 text-lg font-bold bg-transparent outline-none text-zinc-800"
+              />
+              <span className="text-[11px] text-zinc-400 uppercase tracking-wider font-medium">{TYPE_META[openItem.itemType].label}</span>
+            </div>
+            <div className="flex-1 flex flex-col overflow-auto bg-white">
+              {openItem.itemType === 'note' && <NoteContent content={openItem.content} onChange={handleContentChange} />}
+              {openItem.itemType === 'checklist' && <ChecklistContent content={openItem.content} onChange={handleContentChange} />}
+              {openItem.itemType === 'sheet' && <SheetContent content={openItem.content} onChange={handleContentChange} />}
+              {openItem.itemType === 'gallery' && <GalleryContent content={openItem.content} onChange={handleContentChange} />}
+            </div>
+          </div>
+        ) : (
+          /* ━━ Folder View ━━ */
+          <>
+            {/* Breadcrumb + Toolbar */}
+            <div className="flex items-center justify-between px-4 md:px-8 py-3 bg-white/80 backdrop-blur-sm border-b border-zinc-100">
+              <div className="flex items-center gap-1 text-sm overflow-x-auto">
+                {breadcrumb.map((crumb, i) => (
+                  <span key={crumb.id ?? 'home'} className="flex items-center gap-1 flex-shrink-0">
+                    {i > 0 && <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" className="text-zinc-300" viewBox="0 0 24 24"><path d="M9 18l6-6-6-6" /></svg>}
+                    <button
+                      onClick={() => setCurrentFolderId(crumb.id)}
+                      className={`hover:text-blue-500 transition-colors ${i === breadcrumb.length - 1 ? 'font-semibold text-zinc-800' : 'text-zinc-400'}`}
+                    >
+                      {crumb.title}
+                    </button>
+                  </span>
                 ))}
-                {colTasks.length === 0 && status !== 'todo' && (
-                  <p className="text-[11px] text-zinc-400 text-center py-6">No tasks here yet</p>
+              </div>
+              <div className="relative flex-shrink-0" ref={newMenuRef}>
+                <button
+                  onClick={() => setShowNewMenu(!showNewMenu)}
+                  className="flex items-center gap-1.5 px-4 py-2 bg-blue-500 text-white rounded-lg text-xs font-semibold hover:bg-blue-600 transition-colors shadow-sm"
+                >
+                  <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" /></svg>
+                  New
+                </button>
+                {showNewMenu && (
+                  <div className="absolute right-0 top-full mt-1.5 bg-white rounded-xl border border-zinc-200 shadow-xl py-2 w-48 z-50">
+                    {(Object.entries(TYPE_META) as [ProductionItemType, { label: string; defaultIcon: string }][]).map(([type, meta]) => (
+                      <button
+                        key={type}
+                        onClick={() => createItem(type)}
+                        className="w-full text-left px-4 py-2.5 text-sm hover:bg-zinc-50 transition-colors flex items-center gap-3"
+                      >
+                        <span className="text-lg">{meta.defaultIcon}</span>
+                        <span className="font-medium text-zinc-700">{meta.label}</span>
+                      </button>
+                    ))}
+                  </div>
                 )}
               </div>
             </div>
-          );
-        })}
+
+            {/* Grid */}
+            <div className="flex-1 overflow-auto p-4 md:p-8">
+              {currentItems.length === 0 ? (
+                <div className="flex flex-col items-center justify-center h-full text-zinc-300">
+                  <div className="text-6xl mb-4">📂</div>
+                  <p className="text-lg font-medium mb-1">
+                    {currentFolderId ? 'This folder is empty' : 'Your Production Hub'}
+                  </p>
+                  <p className="text-sm mb-6">
+                    {currentFolderId ? 'Create something to get started' : 'Create folders, notes, checklists, and more'}
+                  </p>
+                  <button
+                    onClick={() => setShowNewMenu(true)}
+                    className="px-5 py-2.5 bg-blue-500 text-white rounded-lg text-sm font-semibold hover:bg-blue-600 transition-colors shadow-sm"
+                  >
+                    + Create First Item
+                  </button>
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
+                  {currentItems.map((item) => (
+                    renamingId === item.id ? (
+                      <div key={item.id} className="bg-white rounded-xl border-2 border-blue-400 overflow-hidden">
+                        <div className="h-1 w-full" style={{ backgroundColor: item.color }} />
+                        <div className="p-4">
+                          <span className="text-2xl">{item.icon}</span>
+                          <input
+                            autoFocus
+                            value={renameValue}
+                            onChange={(e) => setRenameValue(e.target.value)}
+                            onBlur={handleRenameSubmit}
+                            onKeyDown={(e) => { if (e.key === 'Enter') handleRenameSubmit(); if (e.key === 'Escape') { setRenamingId(null); setRenameValue(''); } }}
+                            className="w-full text-sm font-semibold mt-3 bg-transparent outline-none border-b border-blue-400 pb-1 text-zinc-800"
+                          />
+                          <p className="text-[11px] text-zinc-400 mt-1">{TYPE_META[item.itemType].label}</p>
+                        </div>
+                      </div>
+                    ) : (
+                      <ItemCard
+                        key={item.id}
+                        item={item}
+                        onOpen={() => handleItemClick(item)}
+                        onDelete={() => handleDelete(item.id)}
+                        onRename={() => { setRenamingId(item.id); setRenameValue(item.title); }}
+                      />
+                    )
+                  ))}
+                </div>
+              )}
+            </div>
+          </>
+        )}
       </div>
 
-      {editing && (
-        <TaskEditor
-          task={editing === 'new' ? undefined : editing}
-          onSave={saveTask}
-          onCancel={() => setEditing(null)}
-          onDelete={editing !== 'new' ? () => deleteTask((editing as Task).id) : undefined}
-        />
+      {/* ── Delete Confirm Modal ── */}
+      {deleteConfirmId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm" onMouseDown={(e) => { if (e.target === e.currentTarget) setDeleteConfirmId(null); }}>
+          <div className="bg-white rounded-xl shadow-xl p-6 max-w-sm w-full mx-4 space-y-4" onMouseDown={(e) => e.stopPropagation()}>
+            <h3 className="text-base font-bold text-zinc-800">Delete folder?</h3>
+            <p className="text-sm text-zinc-500">This will permanently delete this folder and everything inside it.</p>
+            <div className="flex justify-end gap-2 pt-2">
+              <button onClick={() => setDeleteConfirmId(null)} className="px-4 py-2 text-sm text-zinc-500 hover:text-zinc-700 font-medium transition-colors">Cancel</button>
+              <button onClick={confirmDelete} className="px-4 py-2 text-sm bg-red-500 text-white rounded-lg font-medium hover:bg-red-600 transition-colors">Delete</button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

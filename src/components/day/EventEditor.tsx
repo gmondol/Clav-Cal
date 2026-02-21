@@ -33,6 +33,7 @@ export default function EventEditor({
     ? (timeToMinutes(event.endTime) - timeToMinutes(event.startTime)) / 60
     : 1;
   const [segmentLength, setSegmentLength] = useState(defaultLength);
+  const [lengthInput, setLengthInput] = useState(String(defaultLength));
   const [color, setColor] = useState(event?.color ?? '#000000');
   const [address, setAddress] = useState(event?.address ?? '');
   const [contact, setContact] = useState(event?.contact ?? '');
@@ -177,8 +178,20 @@ export default function EventEditor({
             min={0.25}
             max={24}
             step={0.25}
-            value={segmentLength}
-            onChange={(e) => setSegmentLength(Math.max(0.25, parseFloat(e.target.value) || 0.25))}
+            value={lengthInput}
+            onChange={(e) => {
+              setLengthInput(e.target.value);
+              const parsed = parseFloat(e.target.value);
+              if (!isNaN(parsed) && parsed >= 0.25 && parsed <= 24) {
+                setSegmentLength(parsed);
+              }
+            }}
+            onBlur={() => {
+              const parsed = parseFloat(lengthInput);
+              const clamped = isNaN(parsed) ? 0.25 : Math.min(24, Math.max(0.25, parsed));
+              setSegmentLength(clamped);
+              setLengthInput(String(clamped));
+            }}
             className="w-full text-xs bg-zinc-50 rounded-md border border-border-light p-1.5 outline-none focus:border-primary/30"
           />
         </div>

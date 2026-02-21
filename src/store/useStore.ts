@@ -7,6 +7,7 @@ import {
   CalendarEvent,
   CalendarView,
   Contact,
+  ProductionItem,
   SHOW_TYPE_TEMPLATES,
 } from '@/lib/types';
 import { generateId, generateWeeklySummary } from '@/lib/utils';
@@ -27,6 +28,7 @@ interface StoreState {
   notes: ScratchNote[];
   events: CalendarEvent[];
   contacts: Contact[];
+  productionItems: ProductionItem[];
   usedNoteIds: string[];
   customTags: CustomTag[];
   hasSeenOnboarding: boolean;
@@ -57,6 +59,10 @@ interface StoreState {
   addContact: (contact: Omit<Contact, 'id' | 'createdAt'>) => string;
   updateContact: (id: string, updates: Partial<Contact>) => void;
   deleteContact: (id: string) => void;
+
+  addProductionItem: (item: Omit<ProductionItem, 'id' | 'createdAt'>) => string;
+  updateProductionItem: (id: string, updates: Partial<ProductionItem>) => void;
+  deleteProductionItem: (id: string) => void;
 
   scheduleNoteAsEvent: (noteId: string, date: string, startTime?: string) => string;
   exportWeeklySummary: () => string;
@@ -236,6 +242,39 @@ function rowToContact(row: Record<string, unknown>): Contact {
   };
 }
 
+function itemToRow(item: ProductionItem) {
+  return {
+    id: item.id,
+    parent_id: item.parentId,
+    title: item.title,
+    item_type: item.itemType,
+    icon: item.icon,
+    color: item.color,
+    content: JSON.stringify(item.content),
+    sort_order: item.sortOrder,
+    created_at: item.createdAt,
+  };
+}
+
+function rowToItem(row: Record<string, unknown>): ProductionItem {
+  let content: Record<string, unknown> = {};
+  try {
+    const raw = row.content;
+    content = typeof raw === 'string' ? JSON.parse(raw) : (raw as Record<string, unknown>) ?? {};
+  } catch { /* empty */ }
+  return {
+    id: row.id as string,
+    parentId: (row.parent_id as string) ?? null,
+    title: row.title as string,
+    itemType: (row.item_type as ProductionItem['itemType']) ?? 'note',
+    icon: (row.icon as string) ?? '📄',
+    color: (row.color as string) ?? '#3b82f6',
+    content,
+    sortOrder: (row.sort_order as number) ?? 0,
+    createdAt: row.created_at as string,
+  };
+}
+
 export const useStore = create<StoreState>()(
   (set, get) => ({
     currentView: 'month',
@@ -243,6 +282,7 @@ export const useStore = create<StoreState>()(
     notes: [],
     events: [],
     contacts: [],
+    productionItems: [],
     usedNoteIds: [],
     customTags: (() => { try { return JSON.parse(localStorage.getItem('clav-custom-tags') || '[]'); } catch { return []; } })(),
     hasSeenOnboarding: true,
@@ -264,15 +304,18 @@ export const useStore = create<StoreState>()(
     },
 
     loadFromSupabase: async () => {
-      const [notesRes, eventsRes, contactsRes] = await Promise.all([
+      const [notesRes, eventsRes, contactsRes, itemsRes] = await Promise.all([
         supabase.from('notes').select('*').order('sort_order', { ascending: true }),
         supabase.from('events').select('*'),
         supabase.from('contacts').select('*').order('created_at', { ascending: false }),
+        supabase.from('production_items').select('*').order('sort_order', { ascending: true }),
       ]);
       const notes = (notesRes.data ?? []).map(rowToNote);
       const events = (eventsRes.data ?? []).map(rowToEvent);
       const contacts = (contactsRes.data ?? []).map(rowToContact);
-      set({ notes, events, contacts, loaded: true });
+      const productionItems = (itemsRes.data ?? []).map(rowToItem);
+      if (itemsRes.error) console.warn('[Supabase production_items]', itemsRes.error.message, '— run the production_items migration SQL');
+      set({ notes, events, contacts, productionItems, loaded: true });
     },
 
     addNote: (note) => {
@@ -471,6 +514,41 @@ export const useStore = create<StoreState>()(
     deleteContact: (id) => {
       set((s) => ({ contacts: s.contacts.filter((c) => c.id !== id) }));
       supabase.from('contacts').delete().eq('id', id).then((r) => sbLog('delete contact', r));
+    },
+
+    addProductionItem: (item) => {
+      const id = generateId();
+      const full: ProductionItem = { ...item, id, createdAt: new Date().toISOString() };
+      set((s) => ({ productionItems: [...s.productionItems, full] }));
+      supabase.from('production_items').insert(itemToRow(full)).then((r) => sbLog('insert production_item', r));
+      return id;
+    },
+
+    updateProductionItem: (id, updates) => {
+      set((s) => ({
+        productionItems: s.productionItems.map((i) => (i.id === id ? { ...i, ...updates } : i)),
+      }));
+      const row: Record<string, unknown> = {};
+      if (updates.title !== undefined) row.title = updates.title;
+      if (updates.parentId !== undefined) row.parent_id = updates.parentId;
+      if (updates.itemType !== undefined) row.item_type = updates.itemType;
+      if (updates.icon !== undefined) row.icon = updates.icon;
+      if (updates.color !== undefined) row.color = updates.color;
+      if (updates.content !== undefined) row.content = JSON.stringify(updates.content);
+      if (updates.sortOrder !== undefined) row.sort_order = updates.sortOrder;
+      if (Object.keys(row).length > 0) {
+        supabase.from('production_items').update(row).eq('id', id).then((r) => sbLog('update production_item', r));
+      }
+    },
+
+    deleteProductionItem: (id) => {
+      const collectIds = (parentId: string): string[] => {
+        const children = get().productionItems.filter((i) => i.parentId === parentId);
+        return [parentId, ...children.flatMap((c) => collectIds(c.id))];
+      };
+      const toDelete = new Set(collectIds(id));
+      set((s) => ({ productionItems: s.productionItems.filter((i) => !toDelete.has(i.id)) }));
+      supabase.from('production_items').delete().eq('id', id).then((r) => sbLog('delete production_item', r));
     },
 
     scheduleNoteAsEvent: (noteId, date, startTime = '10:00') => {

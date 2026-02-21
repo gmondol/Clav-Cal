@@ -125,6 +125,20 @@ export const COLOR_PALETTE = [
 
 export const SHOW_TYPE_TEMPLATES: Omit<ScratchNote, 'id' | 'createdAt'>[] = [];
 
+export type ProductionItemType = 'folder' | 'note' | 'checklist' | 'sheet' | 'gallery';
+
+export interface ProductionItem {
+  id: string;
+  parentId: string | null;
+  title: string;
+  itemType: ProductionItemType;
+  icon: string;
+  color: string;
+  content: Record<string, unknown>;
+  sortOrder: number;
+  createdAt: string;
+}
+
 export const TAG_DEFAULT_COLORS: Record<string, string> = {
   'At House': '#8b5cf6',
   Travel: '#3b82f6',
