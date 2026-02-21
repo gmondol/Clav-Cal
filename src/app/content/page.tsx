@@ -1299,7 +1299,7 @@ export default function ContentPage() {
         <div className="absolute right-6 flex items-center gap-1">
           <button
             onClick={() => setShowContacts(true)}
-            className="p-2 rounded-lg hover:bg-zinc-100 text-zinc-500 hover:text-blue-500 transition-colors"
+            className="p-1.5 rounded-lg border border-blue-400 hover:bg-blue-50 transition-colors text-blue-500 hover:text-blue-600"
             title="Contacts"
           >
             <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
@@ -1308,7 +1308,7 @@ export default function ContentPage() {
           </button>
           <button
             onClick={() => setShowContentExport(true)}
-            className="p-2 rounded-lg hover:bg-zinc-100 text-zinc-500 hover:text-blue-500 transition-colors"
+            className="p-1.5 rounded-lg border border-blue-400 hover:bg-blue-50 transition-colors text-blue-500 hover:text-blue-600"
             title="Download Content PDF"
           >
             <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">

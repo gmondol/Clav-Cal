@@ -89,7 +89,7 @@ export default function Header({ onExport, onHelp }: HeaderProps) {
       <div className="flex items-center gap-3">
         <button
           onClick={onExport}
-          className="p-1.5 rounded-lg border border-border hover:bg-surface-hover transition-colors text-muted hover:text-foreground"
+          className="p-1.5 rounded-lg border border-blue-400 hover:bg-blue-50 transition-colors text-blue-500 hover:text-blue-600"
           title="Download PDF"
         >
           <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
@@ -99,7 +99,7 @@ export default function Header({ onExport, onHelp }: HeaderProps) {
         {onHelp && (
           <button
             onClick={onHelp}
-            className="p-1.5 rounded-lg border border-border hover:bg-surface-hover transition-colors text-muted hover:text-foreground"
+            className="p-1.5 rounded-lg border border-blue-400 hover:bg-blue-50 transition-colors text-blue-500 hover:text-blue-600"
             title="Help & shortcuts"
           >
             <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
