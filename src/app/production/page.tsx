@@ -145,14 +145,16 @@ function MasterTodoPanel({
                 {item.done && <svg width="10" height="10" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5" /></svg>}
               </button>
               <div className="flex-1 min-w-0">
-                <input
+                <textarea
                   autoFocus={focusId === item.id}
                   value={item.text}
-                  onChange={(e) => updateText(item.id, e.target.value)}
+                  onChange={(e) => { updateText(item.id, e.target.value); e.target.style.height = 'auto'; e.target.style.height = e.target.scrollHeight + 'px'; }}
                   onBlur={() => handleBlur(item.id)}
-                  onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addItem(); } }}
+                  onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); addItem(); } }}
                   placeholder="New task..."
-                  className={`w-full text-[13px] bg-transparent outline-none placeholder:text-zinc-300 ${item.done ? 'line-through text-zinc-400' : 'text-zinc-700'}`}
+                  rows={1}
+                  ref={(el) => { if (el) { el.style.height = 'auto'; el.style.height = el.scrollHeight + 'px'; } }}
+                  className={`w-full text-[13px] bg-transparent outline-none placeholder:text-zinc-300 resize-none overflow-hidden ${item.done ? 'line-through text-zinc-400' : 'text-zinc-700'}`}
                 />
                 {item.assignee && editingAssignee !== item.id && (
                   <button
@@ -164,7 +166,7 @@ function MasterTodoPanel({
                   </button>
                 )}
                 {editingAssignee === item.id && (
-                  <div className="mt-1.5 space-y-1">
+                  <div className="mt-1.5">
                     <input
                       autoFocus
                       value={assigneeInput}
@@ -173,26 +175,10 @@ function MasterTodoPanel({
                         if (e.key === 'Enter') { e.preventDefault(); setAssignee(item.id, assigneeInput.trim() || undefined); }
                         if (e.key === 'Escape') { setEditingAssignee(null); setAssigneeInput(''); }
                       }}
+                      onBlur={() => setAssignee(item.id, assigneeInput.trim() || undefined)}
                       placeholder="Name..."
                       className="w-full text-[11px] bg-white border border-zinc-200 rounded px-2 py-1 outline-none focus:border-amber-400"
                     />
-                    {contacts.length > 0 && (
-                      <div className="flex flex-wrap gap-1">
-                        {contacts.slice(0, 6).map((c) => (
-                          <button
-                            key={c.id}
-                            onClick={() => setAssignee(item.id, c.name)}
-                            className="text-[10px] px-1.5 py-0.5 rounded bg-amber-50 text-amber-700 hover:bg-amber-100 transition-colors truncate max-w-[80px]"
-                          >
-                            {c.name}
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                    <div className="flex gap-1">
-                      <button onClick={() => setAssignee(item.id, assigneeInput.trim() || undefined)} className="text-[10px] text-amber-600 hover:text-amber-700 font-medium">Save</button>
-                      <button onClick={() => setAssignee(item.id, undefined)} className="text-[10px] text-zinc-400 hover:text-red-500">Clear</button>
-                      <button onClick={() => { setEditingAssignee(null); setAssigneeInput(''); }} className="text-[10px] text-zinc-400 hover:text-zinc-500">Cancel</button>
                     </div>
                   </div>
                 )}
