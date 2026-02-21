@@ -277,8 +277,8 @@ function rowToItem(row: Record<string, unknown>): ProductionItem {
 
 export const useStore = create<StoreState>()(
   (set, get) => ({
-    currentView: 'month',
-    selectedDate: format(new Date(), 'yyyy-MM-dd'),
+    currentView: (() => { if (typeof window === 'undefined') return 'month' as const; try { const v = localStorage.getItem('clav-calendar-view'); return (v === 'month' || v === 'week') ? v : 'month'; } catch { return 'month' as const; } })(),
+    selectedDate: (() => { if (typeof window === 'undefined') return format(new Date(), 'yyyy-MM-dd'); try { return localStorage.getItem('clav-calendar-date') || format(new Date(), 'yyyy-MM-dd'); } catch { return format(new Date(), 'yyyy-MM-dd'); } })(),
     notes: [],
     events: [],
     contacts: [],
@@ -288,8 +288,8 @@ export const useStore = create<StoreState>()(
     hasSeenOnboarding: true,
     loaded: false,
 
-    setCurrentView: (view) => set({ currentView: view }),
-    setSelectedDate: (date) => set({ selectedDate: date }),
+    setCurrentView: (view) => { set({ currentView: view }); try { localStorage.setItem('clav-calendar-view', view); } catch {} },
+    setSelectedDate: (date) => { set({ selectedDate: date }); try { localStorage.setItem('clav-calendar-date', date); } catch {} },
     dismissOnboarding: () => set({ hasSeenOnboarding: true }),
 
     addCustomTag: (tag) => {
@@ -315,7 +315,14 @@ export const useStore = create<StoreState>()(
       const contacts = (contactsRes.data ?? []).map(rowToContact);
       const productionItems = (itemsRes.data ?? []).map(rowToItem);
       if (itemsRes.error) console.warn('[Supabase production_items]', itemsRes.error.message, '— run the production_items migration SQL');
-      set({ notes, events, contacts, productionItems, loaded: true });
+      const calendarState: Record<string, unknown> = {};
+      try {
+        const savedView = localStorage.getItem('clav-calendar-view');
+        if (savedView === 'month' || savedView === 'week') calendarState.currentView = savedView;
+        const savedDate = localStorage.getItem('clav-calendar-date');
+        if (savedDate) calendarState.selectedDate = savedDate;
+      } catch { /* SSR or localStorage unavailable */ }
+      set({ notes, events, contacts, productionItems, loaded: true, ...calendarState });
     },
 
     addNote: (note) => {

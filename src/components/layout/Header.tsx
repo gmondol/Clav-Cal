@@ -51,7 +51,7 @@ export default function Header({ onExport, onHelp }: HeaderProps) {
   };
 
   return (
-    <header className="relative flex items-center justify-between px-3 md:px-6 py-2 md:py-3 bg-surface border-b border-border">
+    <header className="relative z-[100] flex items-center justify-between px-3 md:px-6 py-2 md:py-3 bg-surface border-b border-border">
       <div className="flex items-center gap-2 flex-shrink-0">
         <div className="overflow-hidden flex items-center justify-center flex-shrink-0 w-[60px] h-[32px] md:w-[116px] md:h-[61px]">
           <img src="/Favicon.png" alt="Clav Cal" className="h-auto scale-125 translate-y-1 w-[84px] md:w-[162px]" />

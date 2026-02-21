@@ -24,6 +24,7 @@ import WeekView from '@/components/calendar/WeekView';
 import ScratchPanel from '@/components/scratch/ScratchPanel';
 import DayView from '@/components/day/DayView';
 import EventEditor from '@/components/day/EventEditor';
+import NoteEditor from '@/components/ui/NoteEditor';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 
 type DragItem =
@@ -109,9 +110,11 @@ export default function Home() {
     reorderNotes,
     reorderEventsInDay,
     addEvent,
+    addNote,
     updateEvent,
     deleteEvent,
     updateNote,
+    deleteNote,
     loadFromSupabase,
     loaded,
   } = useStore();
@@ -123,7 +126,7 @@ export default function Home() {
   const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null);
   const [showExport, setShowExport] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
-  const [showNewForm, setShowNewForm] = useState(false);
+  const [sidebarEditing, setSidebarEditing] = useState<ScratchNote | null | 'new'>(null);
   const [pendingDrop, setPendingDrop] = useState<PendingDrop | null>(null);
   const [mounted, setMounted] = useState(false);
   const searchRef = useRef<HTMLInputElement | null>(null);
@@ -134,7 +137,7 @@ export default function Home() {
   }, [loadFromSupabase]);
 
   useKeyboardShortcuts({
-    onNewNote: () => setShowNewForm(true),
+    onNewNote: () => setSidebarEditing('new'),
     onSearch: () => searchRef.current?.focus(),
   });
 
@@ -274,7 +277,11 @@ export default function Home() {
             )}
           </div>
           <ResizablePanel>
-            <ScratchPanel searchRef={searchRef} showFormDefault={showNewForm} />
+            <ScratchPanel
+              searchRef={searchRef}
+              onRequestNew={() => setSidebarEditing('new')}
+              onRequestEdit={(note) => setSidebarEditing(note)}
+            />
           </ResizablePanel>
         </div>
       </div>
@@ -321,6 +328,23 @@ export default function Home() {
         </div>
       )}
       {showExport && <ExportModal onClose={() => setShowExport(false)} />}
+
+      {sidebarEditing && (
+        <NoteEditor
+          note={sidebarEditing === 'new' ? undefined : sidebarEditing}
+          allNotes={notes}
+          onSave={(data) => {
+            if (sidebarEditing === 'new') {
+              addNote({ ...data, archived: false, tags: data.tags ?? [], status: 'ready' as const });
+            } else {
+              updateNote(sidebarEditing.id, data);
+            }
+            setSidebarEditing(null);
+          }}
+          onCancel={() => setSidebarEditing(null)}
+          onDelete={sidebarEditing !== 'new' ? () => { deleteNote((sidebarEditing as ScratchNote).id); setSidebarEditing(null); } : undefined}
+        />
+      )}
 
       {pendingDrop && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm animate-fade-in">

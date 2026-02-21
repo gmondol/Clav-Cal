@@ -418,7 +418,7 @@ export default function ProductionPage() {
   return (
     <div className="h-screen flex flex-col" style={{ background: '#f5f5f7' }}>
       {/* ── Header ── */}
-      <header className="relative flex items-center px-3 md:px-6 py-2 md:py-3 bg-white" style={{ boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
+      <header className="relative z-[100] flex items-center px-3 md:px-6 py-2 md:py-3 bg-white" style={{ boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
         <a href="/" className="overflow-hidden flex items-center justify-center flex-shrink-0 w-[60px] h-[32px] md:w-[116px] md:h-[61px]" title="Back to Calendar">
           <img src="/Favicon.png" alt="Clav Cal" className="h-auto scale-125 translate-y-1 w-[84px] md:w-[162px]" />
         </a>
@@ -470,7 +470,7 @@ export default function ProductionPage() {
           /* ━━ Folder View ━━ */
           <>
             {/* Breadcrumb + Toolbar */}
-            <div className="flex items-center justify-between px-4 md:px-8 py-3 bg-white/80 backdrop-blur-sm border-b border-zinc-100">
+            <div className="flex items-center justify-between px-4 md:px-8 py-3 bg-white border-b border-zinc-100">
               <div className="flex items-center gap-1 text-sm overflow-x-auto">
                 {breadcrumb.map((crumb, i) => (
                   <span key={crumb.id ?? 'home'} className="flex items-center gap-1 flex-shrink-0">

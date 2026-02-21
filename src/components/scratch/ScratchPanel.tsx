@@ -1,26 +1,22 @@
 'use client';
 
-import { useState, useRef, useCallback } from 'react';
+import { useState } from 'react';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { useStore } from '@/store/useStore';
 import { ScratchNote, PRESET_TAGS, TAG_DEFAULT_COLORS } from '@/lib/types';
 import NoteCard from './NoteCard';
-import NoteForm from './NoteForm';
 
 interface ScratchPanelProps {
   searchRef?: React.RefObject<HTMLInputElement | null>;
-  showFormDefault?: boolean;
+  onRequestNew?: () => void;
+  onRequestEdit?: (note: ScratchNote) => void;
 }
 
-export default function ScratchPanel({ searchRef, showFormDefault }: ScratchPanelProps) {
-  const { notes, addNote, updateNote, deleteNote, archiveNote, loadTemplates, usedNoteIds } = useStore();
-  const [showForm, setShowForm] = useState(showFormDefault ?? false);
-  const [editingNote, setEditingNote] = useState<ScratchNote | null>(null);
+export default function ScratchPanel({ searchRef, onRequestNew, onRequestEdit }: ScratchPanelProps) {
+  const { notes, archiveNote, deleteNote, usedNoteIds } = useStore();
   const [search, setSearch] = useState('');
   const [filterTag, setFilterTag] = useState<string | null>(null);
   const [showArchived, setShowArchived] = useState(false);
-  const [showAddTag, setShowAddTag] = useState(false);
-  const [newTagName, setNewTagName] = useState('');
 
   const filteredNotes = notes.filter((n) => {
     if (!showArchived && n.archived) return false;
@@ -28,26 +24,8 @@ export default function ScratchPanel({ searchRef, showFormDefault }: ScratchPane
     if (status === 'idea' || status === 'used') return false;
     if (search && !n.title.toLowerCase().includes(search.toLowerCase())) return false;
     if (filterTag && !n.tags.includes(filterTag)) return false;
-    
     return true;
   });
-
-  const handleCreate = useCallback(
-    (data: Omit<ScratchNote, 'id' | 'createdAt'>) => {
-      addNote(data);
-      setShowForm(false);
-    },
-    [addNote]
-  );
-
-  const handleUpdate = useCallback(
-    (data: Omit<ScratchNote, 'id' | 'createdAt'>) => {
-      if (!editingNote) return;
-      updateNote(editingNote.id, data);
-      setEditingNote(null);
-    },
-    [editingNote, updateNote]
-  );
 
   const activeFilterCount = [filterTag].filter(Boolean).length;
 
@@ -57,7 +35,7 @@ export default function ScratchPanel({ searchRef, showFormDefault }: ScratchPane
         <div className="flex items-center justify-center gap-2 px-3 py-1.5">
           <h3 className="text-sm font-bold text-black uppercase tracking-wider">Approved Content</h3>
           <button
-            onClick={() => { setEditingNote(null); setShowForm(true); }}
+            onClick={onRequestNew}
             className="px-2.5 py-1.5 text-xs font-semibold rounded-md text-blue-500 bg-white border border-dashed border-blue-400 hover:bg-blue-50 transition-colors"
           >
             + New
@@ -120,27 +98,19 @@ export default function ScratchPanel({ searchRef, showFormDefault }: ScratchPane
       </div>
 
       <div className="flex-1 overflow-y-auto p-3 space-y-2">
-        {(showForm || editingNote) && (
-          <NoteForm
-            initialNote={editingNote ?? undefined}
-            onSubmit={editingNote ? handleUpdate : handleCreate}
-            onCancel={() => { setShowForm(false); setEditingNote(null); }}
-          />
-        )}
-
         <SortableContext items={filteredNotes.map((n) => n.id)} strategy={verticalListSortingStrategy}>
           {filteredNotes.map((note) => (
             <NoteCard
               key={note.id}
               note={note}
-              onEdit={() => { setEditingNote(note); setShowForm(false); }}
+              onEdit={() => onRequestEdit?.(note)}
               onArchive={() => archiveNote(note.id)}
               onDelete={() => deleteNote(note.id)}
             />
           ))}
         </SortableContext>
 
-        {filteredNotes.length === 0 && !showForm && !editingNote && (
+        {filteredNotes.length === 0 && (
           <div className="text-center py-8">
             <div className="text-2xl mb-2">✅</div>
             <p className="text-xs text-muted">
