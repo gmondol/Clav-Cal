@@ -45,29 +45,29 @@ export default function WeeklyGoals() {
   }, [events, selectedDate, currentView]);
 
   return (
-    <div className="flex items-center gap-4 px-6 py-2 bg-surface border-b border-border">
-      <span className="text-[10px] font-semibold text-muted uppercase tracking-wider">{label}</span>
-      <div className="flex gap-3 flex-wrap">
+    <div className="flex flex-wrap md:flex-nowrap items-center gap-2 md:gap-4 px-3 md:px-6 py-2 bg-surface border-b border-border overflow-x-auto">
+      <span className="text-[10px] font-semibold text-muted uppercase tracking-wider whitespace-nowrap">{label}</span>
+      <div className="flex gap-2 md:gap-3 flex-nowrap md:flex-wrap">
         {tagOrder.map((tag) => (
-          <div key={tag} className="flex items-center gap-1.5">
+          <div key={tag} className="flex items-center gap-1 md:gap-1.5 whitespace-nowrap">
             <div
-              className="w-2 h-2 rounded-full"
+              className="w-2 h-2 rounded-full flex-shrink-0"
               style={{ backgroundColor: TAG_DEFAULT_COLORS[tag] ?? '#94a3b8' }}
             />
-            <span className="text-xs font-medium" style={{ color: TAG_DEFAULT_COLORS[tag] ?? '#64748b' }}>
+            <span className="text-[10px] md:text-xs font-medium" style={{ color: TAG_DEFAULT_COLORS[tag] ?? '#64748b' }}>
               {tag}: <span className="font-semibold">{tagCounts[tag]}</span>
             </span>
           </div>
         ))}
       </div>
-      <div className="flex-1" />
-      <div className="flex items-center gap-4">
+      <div className="hidden md:block flex-1" />
+      <div className="flex items-center gap-2 md:gap-4 whitespace-nowrap">
         <span className="text-[10px] font-semibold text-black uppercase tracking-wider">Total</span>
-        <span className="text-xs text-muted">
+        <span className="text-[10px] md:text-xs text-muted">
           Content Pieces: <span className="font-semibold text-foreground">{filteredEvents.length}</span>
         </span>
         <div className="w-px h-3 bg-border" />
-        <span className="text-xs text-muted">
+        <span className="text-[10px] md:text-xs text-muted">
           Stream Hours: <span className="font-semibold text-foreground">{totalHours % 1 === 0 ? totalHours : totalHours.toFixed(1)}</span>
         </span>
       </div>

@@ -30,7 +30,7 @@ export default function DayCell({ date, events, currentMonth, onClick, onEventCl
     <div
       ref={setNodeRef}
       onClick={onClick}
-      className={`min-h-[120px] border border-border-light p-1 cursor-pointer transition-all duration-150 hover:bg-blue-50/40 ${
+      className={`min-h-[70px] md:min-h-[120px] border border-border-light p-1 cursor-pointer transition-all duration-150 hover:bg-blue-50/40 ${
         isOver ? 'day-cell-drop-active' : ''
       } ${inMonth ? 'bg-surface' : 'bg-zinc-50/60'}`}
     >

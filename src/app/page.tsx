@@ -70,7 +70,7 @@ function ResizablePanel({ children }: { children: React.ReactNode }) {
 
   if (collapsed) {
     return (
-      <div className="flex-shrink-0 border-l border-border bg-surface flex items-center">
+      <div className="hidden md:flex flex-shrink-0 border-l border-border bg-surface items-center">
         <button
           onClick={() => setCollapsed(false)}
           className="p-2 text-muted hover:text-foreground transition-colors"
@@ -85,7 +85,7 @@ function ResizablePanel({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="flex-shrink-0 flex" style={{ width: `${width}px` }}>
+    <div className="hidden md:flex flex-shrink-0" style={{ width: `${width}px` }}>
       <div
         className="w-1 cursor-col-resize hover:bg-blue-400 active:bg-blue-500 transition-colors relative group flex-shrink-0"
         onMouseDown={handleMouseDown}
@@ -256,7 +256,7 @@ export default function Home() {
         <WeeklyGoals />
 
         <div className="flex flex-1 overflow-hidden">
-          <div className="flex-1 overflow-auto p-4">
+          <div className="flex-1 overflow-auto p-2 md:p-4">
             <CalendarNav />
             {currentView === 'month' ? (
               <CalendarGrid onDayClick={handleDayClick} onEventClick={handleEventClick} />
@@ -298,8 +298,8 @@ export default function Home() {
       {(!hasSeenOnboarding || showOnboarding) && <Onboarding onClose={() => setShowOnboarding(false)} />}
       {dayViewDate && <DayView date={dayViewDate} onClose={() => setDayViewDate(null)} />}
       {editingEvent && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm animate-fade-in" onClick={() => setEditingEvent(null)}>
-          <div className="w-full max-w-lg animate-scale-in" onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm animate-fade-in" onMouseDown={(e) => { if (e.target === e.currentTarget) setEditingEvent(null); }}>
+          <div className="w-full max-w-lg animate-scale-in mx-2 md:mx-0" onMouseDown={(e) => e.stopPropagation()}>
             <EventEditor
               event={editingEvent}
               date={editingEvent.date}
@@ -315,7 +315,7 @@ export default function Home() {
 
       {pendingDrop && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm animate-fade-in">
-          <div className="w-full max-w-md animate-scale-in">
+          <div className="w-full max-w-md animate-scale-in mx-2 md:mx-0">
             <EventEditor
               date={pendingDrop.date}
               defaultStartTime="10:00"

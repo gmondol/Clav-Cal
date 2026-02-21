@@ -50,17 +50,17 @@ export default function Header({ onExport, onHelp }: HeaderProps) {
   };
 
   return (
-    <header className="relative flex items-center justify-between px-6 py-3 bg-surface border-b border-border">
+    <header className="relative flex items-center justify-between px-3 md:px-6 py-2 md:py-3 bg-surface border-b border-border">
       <div className="flex items-center gap-2 flex-shrink-0">
-        <div className="overflow-hidden flex items-center justify-center flex-shrink-0" style={{ width: '116px', height: '61px' }}>
-          <img src="/Favicon.png" alt="Clav Cal" className="h-auto scale-125 translate-y-1" style={{ width: '162px' }} />
+        <div className="overflow-hidden flex items-center justify-center flex-shrink-0 w-[60px] h-[32px] md:w-[116px] md:h-[61px]">
+          <img src="/Favicon.png" alt="Clav Cal" className="h-auto scale-125 translate-y-1 w-[84px] md:w-[162px]" />
         </div>
       </div>
 
       <div ref={navRef} className="absolute left-1/2 -translate-x-1/2">
         <button
           onClick={() => setNavOpen((o) => !o)}
-          className="flex items-center gap-1 text-2xl font-bold tracking-tight text-black hover:opacity-80 transition-opacity"
+          className="flex items-center gap-1 text-base md:text-2xl font-bold tracking-tight text-black hover:opacity-80 transition-opacity"
         >
           <span className="text-blue-500">Clav</span> StreamSchedule
           <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" className={`ml-0.5 transition-transform ${navOpen ? 'rotate-180' : ''}`} viewBox="0 0 24 24">
@@ -87,7 +87,7 @@ export default function Header({ onExport, onHelp }: HeaderProps) {
         })()}
       </div>
 
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-1.5 md:gap-3">
         <button
           onClick={onExport}
           className="p-1.5 rounded-lg border border-blue-400 hover:bg-blue-50 transition-colors text-blue-500 hover:text-blue-600"

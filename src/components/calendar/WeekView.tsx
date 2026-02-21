@@ -170,7 +170,7 @@ export default function WeekView({ onDayClick, onEventClick }: WeekViewProps) {
     <div className="flex flex-col h-full bg-surface rounded-lg border border-border overflow-hidden">
       {/* Day headers */}
       <div className="flex border-b border-border sticky top-0 z-20 bg-surface">
-        <div className="w-14 flex-shrink-0 border-r border-border-light" />
+        <div className="w-10 md:w-14 flex-shrink-0 border-r border-border-light" />
         {days.map((day) => {
           const today = isToday(day);
           const dateStr = format(day, 'yyyy-MM-dd');
@@ -178,15 +178,15 @@ export default function WeekView({ onDayClick, onEventClick }: WeekViewProps) {
             <div
               key={dateStr}
               onClick={() => onDayClick(dateStr)}
-              className={`flex-1 min-w-0 p-2 text-center cursor-pointer border-r border-border-light last:border-r-0 transition-colors hover:bg-blue-50/40 ${
+              className={`flex-1 min-w-0 p-1 md:p-2 text-center cursor-pointer border-r border-border-light last:border-r-0 transition-colors hover:bg-blue-50/40 ${
                 today ? 'bg-primary-light' : ''
               }`}
             >
-              <div className="text-[10px] font-semibold text-muted uppercase">
+              <div className="text-[9px] md:text-[10px] font-semibold text-muted uppercase">
                 {format(day, 'EEE')}
               </div>
               <div
-                className={`text-lg font-bold ${
+                className={`text-sm md:text-lg font-bold ${
                   today ? 'text-primary' : 'text-foreground'
                 }`}
               >
@@ -200,15 +200,15 @@ export default function WeekView({ onDayClick, onEventClick }: WeekViewProps) {
       {/* Time grid */}
       <div ref={scrollRef} className="flex flex-1 overflow-y-auto">
         {/* Time labels */}
-        <div className="w-14 flex-shrink-0 border-r border-border-light">
+        <div className="w-10 md:w-14 flex-shrink-0 border-r border-border-light">
           {TIME_SLOTS.map((time, i) => (
             <div
               key={time}
-              className="border-b border-border-light/50 flex items-start justify-end pr-2 pt-0.5"
+              className="border-b border-border-light/50 flex items-start justify-end pr-1 md:pr-2 pt-0.5"
               style={{ height: `${SLOT_HEIGHT}px` }}
             >
               {i % 2 === 0 && (
-                <span className="text-[10px] text-muted leading-none">
+                <span className="text-[8px] md:text-[10px] text-muted leading-none">
                   {formatTimeDisplay(time)}
                 </span>
               )}

@@ -10,8 +10,8 @@ export const NOTE_STATUSES: { value: NoteStatus; label: string; emoji: string; c
 ];
 
 export const PRESET_TAGS = [
-  'Desktop',
-  'IRL',
+  'At House',
+  'Travel',
   'Collab',
   'Sponsorship',
 ] as const;
@@ -126,8 +126,8 @@ export const COLOR_PALETTE = [
 export const SHOW_TYPE_TEMPLATES: Omit<ScratchNote, 'id' | 'createdAt'>[] = [];
 
 export const TAG_DEFAULT_COLORS: Record<string, string> = {
-  Desktop: '#8b5cf6',
-  IRL: '#3b82f6',
+  'At House': '#8b5cf6',
+  Travel: '#3b82f6',
   Collab: '#f43f5e',
   Sponsorship: '#10b981',
 };

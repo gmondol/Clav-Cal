@@ -124,3 +124,12 @@ body {
   align-items: center;
   justify-content: center;
 }
+
+/* ── Mobile responsiveness (max-width: 767px) ── */
+@media (max-width: 767px) {
+  /* Prevent horizontal overflow on calendar page */
+  .mobile-goals-scroll {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+}

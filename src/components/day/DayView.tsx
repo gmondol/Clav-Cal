@@ -192,10 +192,10 @@ export default function DayView({ date, onClose }: DayViewProps) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm animate-fade-in" onClick={onClose}>
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-6xl max-h-[90vh] flex flex-col animate-scale-in overflow-hidden" onClick={(e) => e.stopPropagation()}>
-        <div className="relative flex items-center justify-center p-4 border-b border-border">
-          <div className="absolute left-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm animate-fade-in" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-6xl max-h-[90vh] flex flex-col animate-scale-in overflow-hidden mx-2 md:mx-0" onMouseDown={(e) => e.stopPropagation()}>
+        <div className="relative flex items-center justify-center p-3 md:p-4 border-b border-border">
+          <div className="absolute left-2 md:left-4">
             {editingCityState ? (
               <input
                 autoFocus
@@ -219,7 +219,7 @@ export default function DayView({ date, onClose }: DayViewProps) {
             <h2 className="text-lg font-bold text-foreground">{format(d, 'EEEE, MMMM d')}</h2>
             <p className="text-xs text-muted">{dayEvents.length} event{dayEvents.length !== 1 ? 's' : ''} scheduled</p>
           </div>
-          <div className="absolute right-4 flex items-center gap-2">
+          <div className="absolute right-2 md:right-4 flex items-center gap-2">
             <button
               onClick={onClose}
               className="p-2 rounded-lg hover:bg-red-50 text-muted hover:text-red-500 transition-colors"
@@ -231,10 +231,10 @@ export default function DayView({ date, onClose }: DayViewProps) {
           </div>
         </div>
 
-        <div className="flex flex-1 overflow-hidden">
+        <div className="flex flex-col md:flex-row flex-1 overflow-hidden">
           {/* Timeline */}
           <div className="flex-1 flex flex-col overflow-hidden">
-            <div className="flex border-b border-border-light bg-zinc-50/50 flex-shrink-0">
+            <div className="hidden md:flex border-b border-border-light bg-zinc-50/50 flex-shrink-0">
               <div className="w-16 px-2 py-2 text-[10px] font-bold text-foreground uppercase tracking-wider flex-shrink-0">Time</div>
               <div className="flex-[3] px-3 py-2 text-[10px] font-bold text-foreground uppercase tracking-wider text-center">Activity</div>
               <div className="flex-[3] px-3 py-2 text-[10px] font-bold text-foreground uppercase tracking-wider text-center">Address</div>
@@ -278,7 +278,7 @@ export default function DayView({ date, onClose }: DayViewProps) {
 
           {/* Event Editor */}
           {(showNewForm || editingEvent) && (
-            <div className="w-72 border-l border-border p-3 overflow-y-auto">
+            <div className="hidden md:block w-72 border-l border-border p-3 overflow-y-auto">
               <EventEditor
                 key={editingEvent ? editingEvent.id : 'new'}
                 event={editingEvent ?? undefined}
@@ -293,7 +293,7 @@ export default function DayView({ date, onClose }: DayViewProps) {
           )}
 
           {/* Content Ideas Sidebar */}
-          <div className="w-72 border-l border-border flex flex-col bg-zinc-50/50">
+          <div className="hidden md:flex w-72 border-l border-border flex-col bg-zinc-50/50">
             <div className="p-3 border-b border-border-light">
               <div className="flex items-center justify-between mb-2">
                 <h3 className="text-xs font-bold text-foreground uppercase tracking-wider">Approved Content</h3>

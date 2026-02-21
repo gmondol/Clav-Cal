@@ -56,7 +56,7 @@ function ContentColumn({
     : colNotes;
 
   return (
-    <div className="flex-1 flex flex-col min-w-0">
+    <div className="flex-1 flex flex-col min-w-[260px] md:min-w-0">
       <div className="flex items-center gap-2 mb-1.5 px-1">
         <span className="text-base">{NOTE_STATUSES.find((s) => s.value === status)?.emoji}</span>
         <h2 className="text-sm font-black text-foreground uppercase tracking-widest">{NOTE_STATUSES.find((s) => s.value === status)?.label}</h2>
@@ -165,7 +165,13 @@ function ContentCard({
               ))}
             </div>
           )}
-          <h4 className="text-sm font-semibold leading-tight line-clamp-2" style={{ color: displayColor }}>
+          <h4
+            className="font-semibold leading-tight"
+            style={{
+              color: displayColor,
+              fontSize: note.title.length > 60 ? '10px' : note.title.length > 40 ? '11px' : note.title.length > 25 ? '12px' : '14px',
+            }}
+          >
             {note.title}
           </h4>
         </div>
@@ -386,11 +392,11 @@ function NoteEditor({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm animate-fade-in" onClick={onCancel}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm animate-fade-in" onMouseDown={(e) => { if (e.target === e.currentTarget) onCancel(); }}>
       <form
         onSubmit={handleSubmit}
-        className="bg-white rounded-xl border border-border p-4 space-y-3 animate-scale-in shadow-lg max-h-[80vh] overflow-y-auto max-w-lg w-full relative"
-        onClick={(e) => e.stopPropagation()}
+        className="bg-white rounded-xl border border-border p-4 space-y-3 animate-scale-in shadow-lg max-h-[80vh] overflow-y-auto max-w-lg w-full relative mx-2 md:mx-0"
+        onMouseDown={(e) => e.stopPropagation()}
       >
         <button
           type="button"
@@ -946,11 +952,11 @@ function CollabEditor({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm animate-fade-in" onClick={onCancel}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm animate-fade-in" onMouseDown={(e) => { if (e.target === e.currentTarget) onCancel(); }}>
       <form
         onSubmit={handleSubmit}
-        className="bg-white rounded-xl border border-border p-4 space-y-3 animate-scale-in shadow-lg max-h-[85vh] overflow-y-auto max-w-lg w-full"
-        onClick={(e) => e.stopPropagation()}
+        className="bg-white rounded-xl border border-border p-4 space-y-3 animate-scale-in shadow-lg max-h-[85vh] overflow-y-auto max-w-lg w-full mx-2 md:mx-0"
+        onMouseDown={(e) => e.stopPropagation()}
       >
         <h3 className="text-sm font-bold text-foreground uppercase tracking-wider text-center">Add Collab Profile</h3>
         <input
@@ -1306,15 +1312,15 @@ export default function ContentPage() {
   return (
     <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
     <div className="h-screen flex flex-col" style={{ background: '#e8e8eb' }}>
-      <header className="relative flex items-center px-6 py-3 bg-white" style={{ boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
-        <a href="/" className="overflow-hidden flex items-center justify-center flex-shrink-0" title="Back to Calendar" style={{ width: '116px', height: '61px' }}>
-          <img src="/Favicon.png" alt="Clav Cal" className="h-auto scale-125 translate-y-1" style={{ width: '162px' }} />
+      <header className="relative flex items-center px-3 md:px-6 py-2 md:py-3 bg-white" style={{ boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
+        <a href="/" className="overflow-hidden flex items-center justify-center flex-shrink-0 w-[60px] h-[32px] md:w-[116px] md:h-[61px]" title="Back to Calendar">
+          <img src="/Favicon.png" alt="Clav Cal" className="h-auto scale-125 translate-y-1 w-[84px] md:w-[162px]" />
         </a>
 
         <div ref={navRef} className="absolute left-1/2 -translate-x-1/2">
           <button
             onClick={() => setNavOpen((o) => !o)}
-            className="flex items-center gap-1 text-2xl font-bold tracking-tight text-black hover:opacity-80 transition-opacity"
+            className="flex items-center gap-1 text-base md:text-2xl font-bold tracking-tight text-black hover:opacity-80 transition-opacity"
           >
             <span className="text-blue-500">Content</span> Workshop
             <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" className={`ml-0.5 transition-transform ${navOpen ? 'rotate-180' : ''}`} viewBox="0 0 24 24">
@@ -1341,7 +1347,7 @@ export default function ContentPage() {
           })()}
         </div>
 
-        <div className="absolute right-6 flex items-center gap-1">
+        <div className="absolute right-3 md:right-6 flex items-center gap-1">
           <button
             onClick={() => setShowContacts(true)}
             className="p-1.5 rounded-lg border border-blue-400 hover:bg-blue-50 transition-colors text-blue-500 hover:text-blue-600"
@@ -1363,7 +1369,7 @@ export default function ContentPage() {
         </div>
       </header>
 
-      <div className="flex-1 overflow-hidden flex gap-4 p-4 bg-white">
+      <div className="flex-1 overflow-x-auto md:overflow-hidden flex gap-4 p-2 md:p-4 bg-white">
         {NOTE_STATUSES.filter((col) => col.value !== 'used').map((col) => (
           <ContentColumn
             key={col.value}
@@ -1377,7 +1383,7 @@ export default function ContentPage() {
         ))}
 
         {/* Used Content Column */}
-        <div className="flex-1 flex flex-col min-w-0">
+        <div className="flex-1 flex flex-col min-w-[260px] md:min-w-0">
           <div className="flex items-center gap-2 mb-1.5 px-1">
             <span className="text-base">📋</span>
             <h2 className="text-sm font-black text-foreground uppercase tracking-widest">Used</h2>
@@ -1426,7 +1432,7 @@ export default function ContentPage() {
           </div>
         </div>
 
-        <div className="flex-1 flex flex-col min-w-0">
+        <div className="flex-1 flex flex-col min-w-[260px] md:min-w-0">
           <div className="flex-1 flex flex-col rounded-2xl overflow-hidden bg-white border-2 border-blue-400">
             <div className="flex items-center gap-2 px-3 py-2 border-b border-blue-400 flex-shrink-0 bg-blue-500">
               <span className="text-lg">🧠</span>
@@ -1574,8 +1580,8 @@ function ContentExportModal({ notes, onClose }: { notes: ScratchNote[]; onClose:
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm animate-fade-in" onClick={onClose}>
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 animate-scale-in" onClick={(e) => e.stopPropagation()}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm animate-fade-in" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 animate-scale-in mx-2 md:mx-0" onMouseDown={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-5">
           <h3 className="text-base font-bold text-foreground">Download Content PDF</h3>
           <button
@@ -1711,8 +1717,8 @@ function ContactsModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm animate-fade-in" onClick={onClose}>
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[85vh] flex flex-col animate-scale-in" onClick={(e) => e.stopPropagation()}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm animate-fade-in" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[85vh] flex flex-col animate-scale-in mx-2 md:mx-0" onMouseDown={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between px-5 pt-5 pb-3">
           <div className="flex items-center gap-2">
             <svg width="20" height="20" fill="none" stroke="#3b82f6" strokeWidth="2" viewBox="0 0 24 24">
@@ -1900,11 +1906,11 @@ function ContactEditor({
   const labelClass = "text-[10px] font-semibold text-zinc-500 uppercase tracking-wide mb-1";
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm animate-fade-in" onClick={onCancel}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm animate-fade-in" onMouseDown={(e) => { if (e.target === e.currentTarget) onCancel(); }}>
       <form
         onSubmit={handleSubmit}
-        className="bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[85vh] flex flex-col animate-scale-in"
-        onClick={(e) => e.stopPropagation()}
+        className="bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[85vh] flex flex-col animate-scale-in mx-2 md:mx-0"
+        onMouseDown={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between px-5 pt-5 pb-3">
           <h3 className="text-base font-bold text-foreground">{contact ? 'Edit Contact' : 'New Contact'}</h3>

@@ -24,7 +24,7 @@ export default function Onboarding({ onClose }: OnboardingProps) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-blue-500/20 backdrop-blur-sm animate-fade-in">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-8 text-center animate-scale-in">
+      <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-6 md:p-8 text-center animate-scale-in mx-2 md:mx-0">
         <div className="text-4xl mb-4">🎬</div>
         <h2 className="text-2xl font-bold text-foreground mb-2">
           Welcome to <span className="text-primary">Stream</span>Schedule
