@@ -587,8 +587,30 @@ function NoteEditor({
               className="w-full text-xs bg-zinc-50 rounded-md border border-border-light p-2 outline-none resize-none placeholder:text-zinc-300 focus:border-primary/30"
             />
 
+            {!showContact && contactName.trim() && (
+              <button
+                type="button"
+                onClick={() => setShowContact(true)}
+                className="w-full flex items-center gap-3 p-2.5 rounded-lg border border-zinc-200 bg-zinc-50 hover:bg-zinc-100 transition-colors text-left"
+              >
+                <div className="w-7 h-7 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
+                  <span className="text-xs font-bold text-blue-600">{contactName.trim()[0]?.toUpperCase()}</span>
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs font-semibold text-zinc-800 truncate">
+                    {`${contactName.trim()} ${contactLastName.trim()}`.trim()}
+                  </p>
+                  {contactPhone.trim() && <p className="text-[10px] text-zinc-500 truncate">{contactPhone.trim()}</p>}
+                  {contactEmail.trim() && <p className="text-[10px] text-zinc-500 truncate">{contactEmail.trim()}</p>}
+                </div>
+                <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" className="text-zinc-400 flex-shrink-0">
+                  <path d="M9 18l6-6-6-6" />
+                </svg>
+              </button>
+            )}
+
             <div className="flex gap-2">
-              {!showContact && (
+              {!showContact && !contactName.trim() && (
                 <button
                   type="button"
                   onClick={() => setShowContact(true)}
@@ -621,16 +643,16 @@ function NoteEditor({
                         onClick={() => {
                           const fullName = `${contactName.trim()} ${contactLastName.trim()}`.trim();
                           const existing = contacts.find((c) => c.name.toLowerCase() === fullName.toLowerCase());
-                          if (existing) return;
-                          addContact({
-                            name: fullName,
-                            role: contactRole.trim() || undefined,
-                            phone: contactPhone.trim() || undefined,
-                            email: contactEmail.trim() || undefined,
-                            notes: contactNotes.trim() || undefined,
-                          });
+                          if (!existing) {
+                            addContact({
+                              name: fullName,
+                              role: contactRole.trim() || undefined,
+                              phone: contactPhone.trim() || undefined,
+                              email: contactEmail.trim() || undefined,
+                              notes: contactNotes.trim() || undefined,
+                            });
+                          }
                           setShowContact(false);
-                          setContactName(''); setContactLastName(''); setContactRole(''); setContactPhone(''); setContactEmail(''); setContactNotes('');
                         }}
                         className="text-[10px] font-medium text-blue-500 hover:text-blue-600 disabled:text-zinc-300 disabled:cursor-not-allowed transition-colors flex items-center gap-1 px-2 py-0.5 rounded-md hover:bg-blue-50 disabled:hover:bg-transparent"
                         title="Save to Contacts"
@@ -673,7 +695,13 @@ function NoteEditor({
                   />
                   <input
                     value={contactPhone}
-                    onChange={(e) => setContactPhone(e.target.value)}
+                    onChange={(e) => {
+                      const digits = e.target.value.replace(/\D/g, '').slice(0, 10);
+                      let formatted = digits;
+                      if (digits.length > 6) formatted = `${digits.slice(0, 3)}-${digits.slice(3, 6)}-${digits.slice(6)}`;
+                      else if (digits.length > 3) formatted = `${digits.slice(0, 3)}-${digits.slice(3)}`;
+                      setContactPhone(formatted);
+                    }}
                     placeholder="Phone"
                     className="text-xs bg-zinc-50 border border-zinc-200 rounded-md px-2 py-1.5 outline-none placeholder:text-zinc-400 focus:border-blue-400 transition-colors"
                   />
