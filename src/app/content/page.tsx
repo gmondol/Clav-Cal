@@ -981,7 +981,11 @@ export default function ContentPage() {
                 <button
                   onClick={sendMessage}
                   disabled={!chatInput.trim() || chatLoading}
-                  className="px-3 py-2 text-xs font-semibold bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-40 transition-colors"
+                  className="px-4 py-2 text-xs font-bold uppercase tracking-wider text-white rounded-xl disabled:opacity-40 transition-all active:translate-y-0.5 active:shadow-none"
+                  style={{
+                    background: 'linear-gradient(145deg, #60a5fa, #2563eb)',
+                    boxShadow: '4px 4px 10px rgba(0,0,0,0.25), -2px -2px 8px rgba(255,255,255,0.15), inset 1px 1px 2px rgba(255,255,255,0.2)',
+                  }}
                 >
                   Send
                 </button>

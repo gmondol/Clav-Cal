@@ -89,15 +89,15 @@ function DayEventBlock({
         </div>
         <div className="flex-[3] p-2 flex flex-col justify-start min-w-0 border-l border-border-light">
           {event.address && (
-            <span className="text-xs text-foreground line-clamp-2">📍 {event.address}</span>
+            <span className="text-xs line-clamp-2" style={{ color: event.color }}>📍 {event.address}</span>
           )}
           {event.contact && (
-            <span className="text-xs text-muted line-clamp-2 mt-4">👤 {event.contact}</span>
+            <span className="text-xs line-clamp-2 mt-4 opacity-70" style={{ color: event.color }}>👤 {event.contact}</span>
           )}
         </div>
         <div className="flex-[2] p-2 flex flex-col justify-start min-w-0 border-l border-border-light">
           {event.description && (
-            <span className="text-xs text-foreground line-clamp-4">{event.description}</span>
+            <span className="text-xs line-clamp-4" style={{ color: event.color }}>{event.description}</span>
           )}
         </div>
       </div>
@@ -192,8 +192,8 @@ export default function DayView({ date, onClose }: DayViewProps) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm animate-fade-in" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-6xl max-h-[90vh] flex flex-col animate-scale-in overflow-hidden mx-2 md:mx-0" onMouseDown={(e) => e.stopPropagation()}>
+    <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-black/30 backdrop-blur-sm animate-fade-in pt-[90px] md:pt-[90px] pb-2 md:pb-0" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-6xl max-h-full flex flex-col animate-scale-in overflow-hidden mx-2 md:mx-0" onMouseDown={(e) => e.stopPropagation()}>
         <div className="relative flex items-center justify-center p-3 md:p-4 border-b border-border">
           <div className="absolute left-2 md:left-4">
             {editingCityState ? (

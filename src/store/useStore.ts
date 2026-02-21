@@ -60,7 +60,7 @@ interface StoreState {
   updateContact: (id: string, updates: Partial<Contact>) => void;
   deleteContact: (id: string) => void;
 
-  addProductionItem: (item: Omit<ProductionItem, 'id' | 'createdAt'>) => string;
+  addProductionItem: (item: Omit<ProductionItem, 'id' | 'createdAt'>, customId?: string) => string;
   updateProductionItem: (id: string, updates: Partial<ProductionItem>) => void;
   deleteProductionItem: (id: string) => void;
 
@@ -526,8 +526,8 @@ export const useStore = create<StoreState>()(
       supabase.from('contacts').delete().eq('id', id).then((r) => sbLog('delete contact', r));
     },
 
-    addProductionItem: (item) => {
-      const id = generateId();
+    addProductionItem: (item, customId) => {
+      const id = customId ?? generateId();
       const full: ProductionItem = { ...item, id, createdAt: new Date().toISOString() };
       set((s) => ({ productionItems: [...s.productionItems, full] }));
       supabase.from('production_items').insert(itemToRow(full)).then((r) => sbLog('insert production_item', r));

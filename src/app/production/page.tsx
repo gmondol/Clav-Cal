@@ -21,8 +21,167 @@ const TYPE_META: Record<ProductionItemType, { label: string; defaultIcon: string
 
 const ITEM_COLORS = ['#3b82f6', '#8b5cf6', '#f43f5e', '#10b981', '#f59e0b', '#ec4899', '#06b6d4', '#64748b'];
 
+const MASTER_TODO_ID = '__master_todo__';
+
+interface TodoItem {
+  id: string;
+  text: string;
+  done: boolean;
+  assignee?: string;
+}
+
 function uid() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+}
+
+/* ━━━ Master To-Do Panel ━━━ */
+function MasterTodoPanel({
+  items,
+  onChange,
+}: {
+  items: TodoItem[];
+  onChange: (items: TodoItem[]) => void;
+}) {
+  const [newText, setNewText] = useState('');
+  const [editingAssignee, setEditingAssignee] = useState<string | null>(null);
+  const [assigneeInput, setAssigneeInput] = useState('');
+  const { contacts } = useStore();
+
+  const doneCount = items.filter((i) => i.done).length;
+
+  const addItem = () => {
+    if (!newText.trim()) return;
+    onChange([...items, { id: uid(), text: newText.trim(), done: false }]);
+    setNewText('');
+  };
+
+  const toggle = (id: string) => onChange(items.map((i) => i.id === id ? { ...i, done: !i.done } : i));
+  const remove = (id: string) => onChange(items.filter((i) => i.id !== id));
+  const updateText = (id: string, text: string) => onChange(items.map((i) => i.id === id ? { ...i, text } : i));
+  const setAssignee = (id: string, assignee: string | undefined) => {
+    onChange(items.map((i) => i.id === id ? { ...i, assignee } : i));
+    setEditingAssignee(null);
+    setAssigneeInput('');
+  };
+
+  return (
+    <div className="w-80 border-l border-zinc-200 bg-white flex flex-col flex-shrink-0 hidden lg:flex">
+      <div className="p-4 border-b border-zinc-100">
+        <div className="flex items-center justify-between mb-2">
+          <h3 className="text-sm font-bold text-zinc-800 uppercase tracking-wider">To-Do</h3>
+          {items.length > 0 && (
+            <span className="text-[11px] text-zinc-400 font-medium tabular-nums">{doneCount}/{items.length}</span>
+          )}
+        </div>
+        {items.length > 0 && (
+          <div className="h-1.5 bg-zinc-100 rounded-full overflow-hidden">
+            <div className="h-full bg-emerald-500 rounded-full transition-all" style={{ width: `${items.length ? (doneCount / items.length) * 100 : 0}%` }} />
+          </div>
+        )}
+      </div>
+
+      <div className="flex-1 overflow-y-auto p-3 space-y-0.5">
+        {items.map((item) => (
+          <div key={item.id} className="group flex items-start gap-2 py-2 px-2 -mx-2 rounded-lg hover:bg-zinc-50 transition-colors">
+            <button
+              onClick={() => toggle(item.id)}
+              className={`w-[18px] h-[18px] rounded border-2 flex items-center justify-center flex-shrink-0 mt-0.5 transition-colors ${item.done ? 'bg-emerald-500 border-emerald-500 text-white' : 'border-zinc-300 hover:border-emerald-400'}`}
+            >
+              {item.done && <svg width="10" height="10" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5" /></svg>}
+            </button>
+            <div className="flex-1 min-w-0">
+              <input
+                value={item.text}
+                onChange={(e) => updateText(item.id, e.target.value)}
+                className={`w-full text-xs bg-transparent outline-none ${item.done ? 'line-through text-zinc-400' : 'text-zinc-700'}`}
+              />
+              {item.assignee && editingAssignee !== item.id && (
+                <button
+                  onClick={() => { setEditingAssignee(item.id); setAssigneeInput(item.assignee || ''); }}
+                  className="flex items-center gap-1 mt-1 text-[10px] text-blue-500 hover:text-blue-600 transition-colors"
+                >
+                  <svg width="10" height="10" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="12" cy="7" r="4" /><path d="M5.5 21v-2a6 6 0 0113 0v2" /></svg>
+                  {item.assignee}
+                </button>
+              )}
+              {editingAssignee === item.id && (
+                <div className="mt-1.5 space-y-1">
+                  <input
+                    autoFocus
+                    value={assigneeInput}
+                    onChange={(e) => setAssigneeInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') { e.preventDefault(); setAssignee(item.id, assigneeInput.trim() || undefined); }
+                      if (e.key === 'Escape') { setEditingAssignee(null); setAssigneeInput(''); }
+                    }}
+                    placeholder="Name..."
+                    className="w-full text-[11px] bg-zinc-50 border border-zinc-200 rounded px-2 py-1 outline-none focus:border-blue-400"
+                  />
+                  {contacts.length > 0 && (
+                    <div className="flex flex-wrap gap-1">
+                      {contacts.slice(0, 6).map((c) => (
+                        <button
+                          key={c.id}
+                          onClick={() => setAssignee(item.id, c.name)}
+                          className="text-[10px] px-1.5 py-0.5 rounded bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors truncate max-w-[80px]"
+                        >
+                          {c.name}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  <div className="flex gap-1">
+                    <button onClick={() => setAssignee(item.id, assigneeInput.trim() || undefined)} className="text-[10px] text-blue-500 hover:text-blue-600 font-medium">Save</button>
+                    <button onClick={() => setAssignee(item.id, undefined)} className="text-[10px] text-zinc-400 hover:text-red-500">Clear</button>
+                    <button onClick={() => { setEditingAssignee(null); setAssigneeInput(''); }} className="text-[10px] text-zinc-400 hover:text-zinc-500">Cancel</button>
+                  </div>
+                </div>
+              )}
+            </div>
+            <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
+              {!item.assignee && editingAssignee !== item.id && (
+                <button
+                  onClick={() => { setEditingAssignee(item.id); setAssigneeInput(''); }}
+                  className="p-1 rounded text-zinc-400 hover:text-blue-500 transition-colors"
+                  title="Assign to person"
+                >
+                  <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="12" cy="7" r="4" /><path d="M5.5 21v-2a6 6 0 0113 0v2" /><path d="M20 8v6M23 11h-6" /></svg>
+                </button>
+              )}
+              <button onClick={() => remove(item.id)} className="p-1 rounded text-zinc-400 hover:text-red-500 transition-colors" title="Remove">
+                <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12" /></svg>
+              </button>
+            </div>
+          </div>
+        ))}
+        {items.length === 0 && (
+          <div className="text-center py-8 text-zinc-300">
+            <span className="text-2xl block mb-2">✅</span>
+            <p className="text-xs">No tasks yet</p>
+          </div>
+        )}
+      </div>
+
+      <div className="p-3 border-t border-zinc-100">
+        <div className="flex items-center gap-2">
+          <input
+            value={newText}
+            onChange={(e) => setNewText(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addItem(); } }}
+            placeholder="Add a task..."
+            className="flex-1 text-xs bg-zinc-50 border border-zinc-200 rounded-lg px-3 py-2 outline-none placeholder:text-zinc-300 focus:border-blue-400 transition-colors"
+          />
+          <button
+            onClick={addItem}
+            disabled={!newText.trim()}
+            className="p-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-40 transition-colors"
+          >
+            <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" /></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 /* ━━━ Breadcrumb Path Builder ━━━ */
@@ -325,6 +484,29 @@ export default function ProductionPage() {
   const [renameValue, setRenameValue] = useState('');
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
 
+  const masterTodo = productionItems.find((i) => i.id === MASTER_TODO_ID);
+  const todoItems: TodoItem[] = (masterTodo?.content?.items as TodoItem[] | undefined) ?? [];
+
+  useEffect(() => {
+    if (!masterTodo) {
+      addProductionItem({
+        parentId: null,
+        title: '__master_todo__',
+        itemType: 'checklist',
+        icon: '✅',
+        color: '#10b981',
+        content: { items: [] },
+        sortOrder: -1,
+      }, MASTER_TODO_ID);
+    }
+  }, [masterTodo, addProductionItem]);
+
+  const handleTodoChange = useCallback((items: TodoItem[]) => {
+    if (masterTodo) {
+      updateProductionItem(masterTodo.id, { content: { items } });
+    }
+  }, [masterTodo, updateProductionItem]);
+
   const navRef = useRef<HTMLDivElement>(null);
   const newMenuRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<Record<string, unknown>>({});
@@ -340,7 +522,7 @@ export default function ProductionPage() {
   }, []);
 
   const currentItems = useMemo(() => {
-    const items = productionItems.filter((i) => i.parentId === currentFolderId);
+    const items = productionItems.filter((i) => i.parentId === currentFolderId && i.id !== MASTER_TODO_ID);
     const folders = items.filter((i) => i.itemType === 'folder').sort((a, b) => a.sortOrder - b.sortOrder);
     const files = items.filter((i) => i.itemType !== 'folder').sort((a, b) => a.sortOrder - b.sortOrder);
     return [...folders, ...files];
@@ -443,7 +625,8 @@ export default function ProductionPage() {
       </header>
 
       {/* ── Content ── */}
-      <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="flex-1 flex overflow-hidden">
+        <div className="flex-1 flex flex-col overflow-hidden">
         {openItem ? (
           /* ━━ Item Editor View ━━ */
           <div className="flex-1 flex flex-col overflow-hidden">
@@ -470,7 +653,7 @@ export default function ProductionPage() {
           /* ━━ Folder View ━━ */
           <>
             {/* Breadcrumb + Toolbar */}
-            <div className="flex items-center justify-between px-4 md:px-8 py-3 bg-white border-b border-zinc-100">
+            <div className="flex items-center px-4 md:px-8 py-3 bg-white border-b border-zinc-100">
               <div className="flex items-center gap-1 text-sm overflow-x-auto">
                 {breadcrumb.map((crumb, i) => (
                   <span key={crumb.id ?? 'home'} className="flex items-center gap-1 flex-shrink-0">
@@ -483,29 +666,6 @@ export default function ProductionPage() {
                     </button>
                   </span>
                 ))}
-              </div>
-              <div className="relative flex-shrink-0" ref={newMenuRef}>
-                <button
-                  onClick={() => setShowNewMenu(!showNewMenu)}
-                  className="flex items-center gap-1.5 px-4 py-2 bg-blue-500 text-white rounded-lg text-xs font-semibold hover:bg-blue-600 transition-colors shadow-sm"
-                >
-                  <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" /></svg>
-                  New
-                </button>
-                {showNewMenu && (
-                  <div className="absolute right-0 top-full mt-1.5 bg-white rounded-xl border border-zinc-200 shadow-xl py-2 w-48 z-50">
-                    {(Object.entries(TYPE_META) as [ProductionItemType, { label: string; defaultIcon: string }][]).map(([type, meta]) => (
-                      <button
-                        key={type}
-                        onClick={() => createItem(type)}
-                        className="w-full text-left px-4 py-2.5 text-sm hover:bg-zinc-50 transition-colors flex items-center gap-3"
-                      >
-                        <span className="text-lg">{meta.defaultIcon}</span>
-                        <span className="font-medium text-zinc-700">{meta.label}</span>
-                      </button>
-                    ))}
-                  </div>
-                )}
               </div>
             </div>
 
@@ -561,6 +721,8 @@ export default function ProductionPage() {
             </div>
           </>
         )}
+        </div>
+        <MasterTodoPanel items={todoItems} onChange={handleTodoChange} />
       </div>
 
       {/* ── Delete Confirm Modal ── */}
