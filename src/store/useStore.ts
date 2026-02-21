@@ -335,12 +335,10 @@ export const useStore = create<StoreState>()(
       set((s) => ({
         events: [...s.events, event],
         usedNoteIds: s.usedNoteIds.includes(noteId) ? s.usedNoteIds : [...s.usedNoteIds, noteId],
-        notes: note.keepInScratch ? s.notes : s.notes.filter((n) => n.id !== noteId),
+        notes: s.notes.map((n) => n.id === noteId ? { ...n, status: 'used' as const } : n),
       }));
       supabase.from('events').insert(eventToRow(event)).then((r) => sbLog('schedule event', r));
-      if (!note.keepInScratch) {
-        supabase.from('notes').delete().eq('id', noteId).then((r) => sbLog('delete scheduled note', r));
-      }
+      supabase.from('notes').update({ status: 'used' }).eq('id', noteId).then((r) => sbLog('mark note used', r));
       return eventId;
     },
 

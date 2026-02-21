@@ -139,7 +139,7 @@ function ContentCard({
           </h4>
         </div>
         <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" onClick={(e) => e.stopPropagation()} onPointerDown={(e) => e.stopPropagation()}>
-          {note.status !== 'ready' && (
+          {note.status !== 'ready' ? (
             <button
               onClick={() => onMove('ready')}
               className="p-1 rounded hover:bg-green-50 text-zinc-400 hover:text-green-600 transition-colors"
@@ -150,6 +150,20 @@ function ContentCard({
                   <path d="M19 12H5M12 19l-7-7 7-7" />
                 ) : (
                   <path d="M5 12h14M12 5l7 7-7 7" />
+                )}
+              </svg>
+            </button>
+          ) : (
+            <button
+              onClick={() => onMove((note.collabProfiles?.length ?? 0) > 0 ? 'workshop' : 'idea')}
+              className="p-1 rounded hover:bg-zinc-100 text-zinc-400 hover:text-zinc-600 transition-colors"
+              title={(note.collabProfiles?.length ?? 0) > 0 ? 'Move back to Collabs' : 'Move back to Ideas'}
+            >
+              <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                {(note.collabProfiles?.length ?? 0) > 0 ? (
+                  <path d="M5 12h14M12 5l7 7-7 7" />
+                ) : (
+                  <path d="M19 12H5M12 19l-7-7 7-7" />
                 )}
               </svg>
             </button>
@@ -1057,7 +1071,7 @@ export default function ContentPage() {
       </header>
 
       <div className="flex-1 overflow-hidden flex gap-4 p-4 bg-white">
-        {NOTE_STATUSES.map((col) => (
+        {NOTE_STATUSES.filter((col) => col.value !== 'used').map((col) => (
           <ContentColumn
             key={col.value}
             status={col.value}

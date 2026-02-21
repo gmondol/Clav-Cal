@@ -202,7 +202,7 @@ export default function DayView({ date, onClose }: DayViewProps) {
       attachments: note.attachments ?? [],
       fromNoteId: note.id,
     });
-    updateNote(note.id, { status: 'ready' });
+    updateNote(note.id, { status: 'used' });
   };
 
   return (
@@ -310,7 +310,7 @@ export default function DayView({ date, onClose }: DayViewProps) {
           <div className="w-72 border-l border-border flex flex-col bg-zinc-50/50">
             <div className="p-3 border-b border-border-light">
               <div className="flex items-center justify-between mb-2">
-                <h3 className="text-xs font-bold text-foreground uppercase tracking-wider">Content Ideas</h3>
+                <h3 className="text-xs font-bold text-foreground uppercase tracking-wider">Approved Content</h3>
                 <button
                   onClick={() => { setShowNewForm(true); setEditingEvent(null); }}
                   className="px-2 py-1 text-[10px] font-semibold bg-white text-blue-500 border border-dashed border-blue-500 rounded-lg hover:bg-blue-50 transition-colors"
@@ -340,11 +340,10 @@ export default function DayView({ date, onClose }: DayViewProps) {
               )}
               {filteredNotes.map((note) => {
                 const statusInfo = NOTE_STATUSES.find((s) => s.value === (note.status ?? 'idea'));
-                const isAlreadyScheduled = dayEvents.some((e) => e.fromNoteId === note.id);
                 return (
                   <div
                     key={note.id}
-                    className={`rounded-lg p-2.5 transition-all group ${isAlreadyScheduled ? 'opacity-50' : 'hover:shadow-sm'}`}
+                    className="rounded-lg p-4 transition-all group hover:shadow-sm"
                     style={{ backgroundColor: note.color + '10', borderLeft: `3px solid ${note.color}` }}
                   >
                     <div className="flex items-start justify-between gap-1.5">
@@ -356,18 +355,6 @@ export default function DayView({ date, onClose }: DayViewProps) {
                           <p className="text-[10px] text-zinc-400 mt-0.5 line-clamp-2">{note.description}</p>
                         )}
                       </div>
-                      {!isAlreadyScheduled && (
-                        <button
-                          onClick={() => scheduleNote(note)}
-                          className="flex-shrink-0 px-1.5 py-0.5 text-[9px] font-semibold rounded bg-blue-500 text-white hover:bg-blue-600 opacity-0 group-hover:opacity-100 transition-all"
-                          title="Schedule for this day"
-                        >
-                          + Schedule
-                        </button>
-                      )}
-                      {isAlreadyScheduled && (
-                        <span className="flex-shrink-0 text-[9px] text-green-500 font-medium">Scheduled</span>
-                      )}
                     </div>
                     <div className="flex items-center gap-1 mt-1.5">
                       {statusInfo && (
