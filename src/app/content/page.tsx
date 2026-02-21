@@ -912,11 +912,11 @@ function CollabEditor({
                   </div>
                 </div>
                 <div className="flex gap-2">
-                  <div className="flex-shrink-0 w-12 h-12 rounded-full overflow-hidden bg-purple-100 flex items-center justify-center border border-purple-200">
+                  <div className="flex-shrink-0 w-12 h-12 rounded-full overflow-hidden bg-zinc-200 flex items-center justify-center border border-zinc-300">
                     {profile.profilePicUrl ? (
                       <img src={profile.profilePicUrl} alt="" className="w-full h-full object-cover" />
                     ) : (
-                      <svg width="20" height="20" fill="none" stroke="#8b5cf6" strokeWidth="2" viewBox="0 0 24 24">
+                      <svg width="20" height="20" fill="none" stroke="#000000" strokeWidth="2" viewBox="0 0 24 24">
                         <path d="M12 5v14M5 12h14" />
                       </svg>
                     )}
