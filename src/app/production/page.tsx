@@ -51,7 +51,7 @@ function MasterTodoPanel({
 
   const addItem = () => {
     const id = uid();
-    onChange([{ id, text: '', done: false }, ...items]);
+    onChange([...items, { id, text: '', done: false }]);
     setFocusId(id);
   };
 
@@ -463,7 +463,7 @@ function ItemCard({
 
 /* ━━━ Main Page ━━━ */
 export default function ProductionPage() {
-  const { productionItems, addProductionItem, updateProductionItem, deleteProductionItem } = useStore();
+  const { productionItems, addProductionItem, updateProductionItem, deleteProductionItem, loaded } = useStore();
   const [currentFolderId, setCurrentFolderId] = useState<string | null>(null);
   const [openItemId, setOpenItemId] = useState<string | null>(null);
   const [showNewMenu, setShowNewMenu] = useState(false);
@@ -476,7 +476,7 @@ export default function ProductionPage() {
   const todoItems: TodoItem[] = (masterTodo?.content?.items as TodoItem[] | undefined) ?? [];
 
   useEffect(() => {
-    if (!masterTodo) {
+    if (loaded && !masterTodo) {
       addProductionItem({
         parentId: null,
         title: '__master_todo__',
@@ -487,7 +487,7 @@ export default function ProductionPage() {
         sortOrder: -1,
       }, MASTER_TODO_ID);
     }
-  }, [masterTodo, addProductionItem]);
+  }, [loaded, masterTodo, addProductionItem]);
 
   const handleTodoChange = useCallback((items: TodoItem[]) => {
     if (masterTodo) {
@@ -640,23 +640,6 @@ export default function ProductionPage() {
         ) : (
           /* ━━ Folder View ━━ */
           <>
-            {/* Breadcrumb + Toolbar */}
-            <div className="flex items-center px-4 md:px-8 py-3 bg-white border-b border-zinc-100">
-              <div className="flex items-center gap-1 text-sm overflow-x-auto">
-                {breadcrumb.map((crumb, i) => (
-                  <span key={crumb.id ?? 'home'} className="flex items-center gap-1 flex-shrink-0">
-                    {i > 0 && <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" className="text-zinc-300" viewBox="0 0 24 24"><path d="M9 18l6-6-6-6" /></svg>}
-                    <button
-                      onClick={() => setCurrentFolderId(crumb.id)}
-                      className={`hover:text-blue-500 transition-colors ${i === breadcrumb.length - 1 ? 'font-semibold text-zinc-800' : 'text-zinc-400'}`}
-                    >
-                      {crumb.title}
-                    </button>
-                  </span>
-                ))}
-              </div>
-            </div>
-
             {/* Grid */}
             <div className="flex-1 overflow-auto p-4 md:p-8">
               {currentItems.length === 0 ? (
@@ -668,12 +651,28 @@ export default function ProductionPage() {
                   <p className="text-sm mb-6">
                     {currentFolderId ? 'Create something to get started' : 'Create folders, notes, checklists, and more'}
                   </p>
-                  <button
-                    onClick={() => setShowNewMenu(true)}
-                    className="px-5 py-2.5 bg-blue-500 text-white rounded-lg text-sm font-semibold hover:bg-blue-600 transition-colors shadow-sm"
-                  >
-                    + Create First Item
-                  </button>
+                  <div className="relative" ref={newMenuRef}>
+                    <button
+                      onClick={() => setShowNewMenu(!showNewMenu)}
+                      className="px-5 py-2.5 bg-blue-500 text-white rounded-lg text-sm font-semibold hover:bg-blue-600 transition-colors shadow-sm"
+                    >
+                      + Create First Item
+                    </button>
+                    {showNewMenu && (
+                      <div className="absolute left-1/2 -translate-x-1/2 top-full mt-2 bg-white rounded-xl border border-zinc-200 shadow-xl py-2 w-48 z-50">
+                        {(Object.entries(TYPE_META) as [ProductionItemType, { label: string; defaultIcon: string }][]).map(([type, meta]) => (
+                          <button
+                            key={type}
+                            onClick={() => { createItem(type); setShowNewMenu(false); }}
+                            className="w-full text-left px-4 py-2.5 text-sm hover:bg-zinc-50 transition-colors flex items-center gap-3"
+                          >
+                            <span className="text-lg">{meta.defaultIcon}</span>
+                            <span className="font-medium text-zinc-700">{meta.label}</span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
               ) : (
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">

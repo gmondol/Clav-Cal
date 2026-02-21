@@ -530,7 +530,12 @@ export const useStore = create<StoreState>()(
       const id = customId ?? generateId();
       const full: ProductionItem = { ...item, id, createdAt: new Date().toISOString() };
       set((s) => ({ productionItems: [...s.productionItems, full] }));
-      supabase.from('production_items').insert(itemToRow(full)).then((r) => sbLog('insert production_item', r));
+      const row = itemToRow(full);
+      if (customId) {
+        supabase.from('production_items').upsert(row, { onConflict: 'id' }).then((r) => sbLog('upsert production_item', r));
+      } else {
+        supabase.from('production_items').insert(row).then((r) => sbLog('insert production_item', r));
+      }
       return id;
     },
 
