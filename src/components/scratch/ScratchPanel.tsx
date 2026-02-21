@@ -108,12 +108,6 @@ export default function ScratchPanel({ searchRef, showFormDefault }: ScratchPane
               </button>
             );
           })}
-          <button
-            onClick={() => setShowAddTag(!showAddTag)}
-            className="text-[10px] px-2 py-0.5 rounded-full border border-dashed border-blue-500 text-blue-500 hover:bg-blue-50 transition-colors font-medium"
-          >
-            + Add Tag
-          </button>
           {activeFilterCount > 0 && (
             <button
               onClick={() => setFilterTag(null)}
@@ -123,26 +117,6 @@ export default function ScratchPanel({ searchRef, showFormDefault }: ScratchPane
             </button>
           )}
         </div>
-        {showAddTag && (
-          <div className="flex items-center gap-1.5">
-            <input
-              autoFocus
-              value={newTagName}
-              onChange={(e) => setNewTagName(e.target.value)}
-              placeholder="New tag name..."
-              className="flex-1 text-[10px] bg-zinc-50 rounded-md border border-border-light py-1 px-2 outline-none placeholder:text-zinc-300 focus:border-primary/30"
-              onKeyDown={(e) => {
-                if (e.key === 'Escape') { setShowAddTag(false); setNewTagName(''); }
-              }}
-            />
-            <button
-              onClick={() => { setShowAddTag(false); setNewTagName(''); }}
-              className="text-[9px] text-zinc-400 hover:text-zinc-600"
-            >
-              Cancel
-            </button>
-          </div>
-        )}
       </div>
 
       <div className="flex-1 overflow-y-auto p-3 space-y-2">

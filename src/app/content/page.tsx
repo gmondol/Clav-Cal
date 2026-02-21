@@ -256,9 +256,15 @@ function NoteEditor({
   const [uploading, setUploading] = useState(false);
   const [linkedCollabIds, setLinkedCollabIds] = useState<string[]>(note?.linkedCollabIds ?? []);
   const [showCollabPicker, setShowCollabPicker] = useState(false);
+  const [showNewTagForm, setShowNewTagForm] = useState(false);
+  const [newTagName, setNewTagName] = useState('');
+  const [newTagColor, setNewTagColor] = useState('#3b82f6');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const status = note?.status ?? 'idea';
   const isApproved = status === 'ready';
+  const { customTags, addCustomTag } = useStore();
+
+  customTags.forEach((t) => { TAG_DEFAULT_COLORS[t.name] = t.color; });
 
   const availableCollabs = allNotes.filter(
     (n) => n.status === 'workshop' && (n.collabProfiles?.length ?? 0) > 0 && !linkedCollabIds.includes(n.id)
@@ -350,9 +356,8 @@ function NoteEditor({
         <div>
           <label className="text-[10px] font-semibold text-muted uppercase tracking-wider mb-1 block">Tag</label>
           <div className="flex flex-wrap gap-1.5">
-            {PRESET_TAGS.map((tag) => {
+            {[...PRESET_TAGS.map((t) => ({ name: t, color: TAG_DEFAULT_COLORS[t] || '#000' })), ...customTags].map(({ name: tag, color: tagColor }) => {
               const isActive = tags.includes(tag);
-              const tagColor = TAG_DEFAULT_COLORS[tag];
               return (
                 <button
                   key={tag}
@@ -369,7 +374,55 @@ function NoteEditor({
                 </button>
               );
             })}
+            <button
+              type="button"
+              onClick={() => setShowNewTagForm(!showNewTagForm)}
+              className="text-[10px] px-2 py-0.5 rounded-full font-medium border border-dashed border-zinc-300 text-zinc-400 hover:border-zinc-400 hover:text-zinc-500 transition-colors"
+            >
+              + New Tag
+            </button>
           </div>
+          {showNewTagForm && (
+            <div className="mt-2 flex items-center gap-2 p-2 bg-zinc-50 rounded-lg border border-border-light">
+              <input
+                type="color"
+                value={newTagColor}
+                onChange={(e) => setNewTagColor(e.target.value)}
+                className="w-6 h-6 rounded cursor-pointer border-0 p-0"
+              />
+              <input
+                value={newTagName}
+                onChange={(e) => setNewTagName(e.target.value)}
+                placeholder="Tag name"
+                className="flex-1 text-[11px] bg-white border border-border-light rounded px-2 py-1 outline-none focus:border-blue-400"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    if (newTagName.trim()) {
+                      addCustomTag({ name: newTagName.trim(), color: newTagColor });
+                      TAG_DEFAULT_COLORS[newTagName.trim()] = newTagColor;
+                      setNewTagName('');
+                      setShowNewTagForm(false);
+                    }
+                  }
+                }}
+              />
+              <button
+                type="button"
+                onClick={() => {
+                  if (newTagName.trim()) {
+                    addCustomTag({ name: newTagName.trim(), color: newTagColor });
+                    TAG_DEFAULT_COLORS[newTagName.trim()] = newTagColor;
+                    setNewTagName('');
+                    setShowNewTagForm(false);
+                  }
+                }}
+                className="text-[10px] px-2 py-1 bg-blue-500 text-white rounded font-medium hover:bg-blue-600 transition-colors"
+              >
+                Add
+              </button>
+            </div>
+          )}
         </div>
 
         <textarea

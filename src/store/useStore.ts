@@ -15,18 +15,27 @@ function sbLog(label: string, res: { error: { message: string } | null }) {
   if (res.error) console.error(`[Supabase ${label}]`, res.error.message);
 }
 
+interface CustomTag {
+  name: string;
+  color: string;
+}
+
 interface StoreState {
   currentView: CalendarView;
   selectedDate: string;
   notes: ScratchNote[];
   events: CalendarEvent[];
   usedNoteIds: string[];
+  customTags: CustomTag[];
   hasSeenOnboarding: boolean;
   loaded: boolean;
 
   setCurrentView: (view: CalendarView) => void;
   setSelectedDate: (date: string) => void;
   dismissOnboarding: () => void;
+
+  addCustomTag: (tag: CustomTag) => void;
+  removeCustomTag: (name: string) => void;
 
   loadFromSupabase: () => Promise<void>;
 
@@ -152,12 +161,24 @@ export const useStore = create<StoreState>()(
     notes: [],
     events: [],
     usedNoteIds: [],
+    customTags: (() => { try { return JSON.parse(localStorage.getItem('clav-custom-tags') || '[]'); } catch { return []; } })(),
     hasSeenOnboarding: true,
     loaded: false,
 
     setCurrentView: (view) => set({ currentView: view }),
     setSelectedDate: (date) => set({ selectedDate: date }),
     dismissOnboarding: () => set({ hasSeenOnboarding: true }),
+
+    addCustomTag: (tag) => {
+      const next = [...get().customTags.filter((t) => t.name !== tag.name), tag];
+      set({ customTags: next });
+      localStorage.setItem('clav-custom-tags', JSON.stringify(next));
+    },
+    removeCustomTag: (name) => {
+      const next = get().customTags.filter((t) => t.name !== name);
+      set({ customTags: next });
+      localStorage.setItem('clav-custom-tags', JSON.stringify(next));
+    },
 
     loadFromSupabase: async () => {
       const [notesRes, eventsRes] = await Promise.all([
