@@ -13,4 +13,8 @@ CREATE TABLE IF NOT EXISTS production_items (
 CREATE INDEX idx_production_items_parent ON production_items(parent_id);
 
 ALTER TABLE production_items ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Allow all" ON production_items FOR ALL USING (true) WITH CHECK (true);
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'production_items' AND policyname = 'Allow all') THEN
+    CREATE POLICY "Allow all" ON production_items FOR ALL USING (true) WITH CHECK (true);
+  END IF;
+END $$;

@@ -12,4 +12,8 @@ CREATE TABLE IF NOT EXISTS tasks (
 );
 
 ALTER TABLE tasks ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Allow all" ON tasks FOR ALL USING (true) WITH CHECK (true);
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'tasks' AND policyname = 'Allow all') THEN
+    CREATE POLICY "Allow all" ON tasks FOR ALL USING (true) WITH CHECK (true);
+  END IF;
+END $$;
