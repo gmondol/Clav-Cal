@@ -32,6 +32,16 @@ interface ChatMessage {
   content: string;
 }
 
+function resolveTagColor(tags: string[], noteColor?: string): string {
+  const { customTags } = useStore.getState();
+  for (const t of tags) {
+    if (TAG_DEFAULT_COLORS[t]) return TAG_DEFAULT_COLORS[t];
+    const custom = customTags.find((ct) => ct.name === t);
+    if (custom) return custom.color;
+  }
+  return noteColor || '#6b7280';
+}
+
 function ContentColumn({
   status,
   colNotes,
@@ -122,7 +132,7 @@ function ContentCard({
     data: { type: 'content-note', note },
   });
 
-  const displayColor = (note.tags.length > 0 && TAG_DEFAULT_COLORS[note.tags[0]]) ? TAG_DEFAULT_COLORS[note.tags[0]] : (note.color || '#000000');
+  const displayColor = resolveTagColor(note.tags, note.color);
 
   const collabNames: string[] = [];
   if (note.collabProfiles && note.collabProfiles.length > 0) {
@@ -885,7 +895,7 @@ export default function ContentPage() {
               <p className="text-[11px] text-zinc-400 text-center py-8">Scheduled content will appear here</p>
             ) : (
               getNotesForStatus('used').filter((n) => !usedSearch.trim() || n.title.toLowerCase().includes(usedSearch.trim().toLowerCase()) || n.description?.toLowerCase().includes(usedSearch.trim().toLowerCase())).map((note) => {
-                const displayColor = (note.tags.length > 0 && TAG_DEFAULT_COLORS[note.tags[0]]) ? TAG_DEFAULT_COLORS[note.tags[0]] : (note.color || '#000000');
+                const displayColor = resolveTagColor(note.tags, note.color);
                 return (
                   <div
                     key={note.id}

@@ -46,6 +46,7 @@ function MasterTodoPanel({
   const [editingAssignee, setEditingAssignee] = useState<string | null>(null);
   const [assigneeInput, setAssigneeInput] = useState('');
   const { contacts } = useStore();
+  const listRef = useRef<HTMLDivElement>(null);
 
   const doneCount = items.filter((i) => i.done).length;
 
@@ -53,10 +54,13 @@ function MasterTodoPanel({
     const id = uid();
     onChange([...items, { id, text: '', done: false }]);
     setFocusId(id);
+    requestAnimationFrame(() => {
+      listRef.current?.scrollTo({ top: listRef.current.scrollHeight, behavior: 'smooth' });
+    });
   };
 
   const toggle = (id: string) => onChange(items.map((i) => i.id === id ? { ...i, done: !i.done } : i));
-  const remove = (id: string) => onChange(items.filter((i) => i.id !== id));
+  const remove = (id: string) => { if (id === focusId) setFocusId(null); onChange(items.filter((i) => i.id !== id)); };
   const updateText = (id: string, text: string) => onChange(items.map((i) => i.id === id ? { ...i, text } : i));
   const setAssignee = (id: string, assignee: string | undefined) => {
     onChange(items.map((i) => i.id === id ? { ...i, assignee } : i));
@@ -65,8 +69,10 @@ function MasterTodoPanel({
   };
 
   const handleBlur = (item: TodoItem) => {
-    if (!item.text.trim()) remove(item.id);
-    setFocusId(null);
+    setTimeout(() => {
+      if (!item.text.trim()) remove(item.id);
+      setFocusId(null);
+    }, 150);
   };
 
   return (
@@ -80,7 +86,7 @@ function MasterTodoPanel({
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-3 pb-3">
+      <div ref={listRef} className="flex-1 overflow-y-auto px-3 pb-3">
         <button
           onClick={addItem}
           className="w-full py-2 mb-2 text-xs text-zinc-400 font-medium border border-dashed border-zinc-300 rounded-lg hover:border-zinc-400 hover:text-zinc-500 hover:bg-white/60 transition-colors"
@@ -424,10 +430,10 @@ function ItemCard({
   return (
     <div
       onClick={onOpen}
-      className="group bg-white rounded-xl border border-zinc-200 hover:border-zinc-300 hover:shadow-md transition-all cursor-pointer relative overflow-hidden"
+      className="group bg-white rounded-xl border border-zinc-200 hover:border-zinc-300 hover:shadow-md transition-all cursor-pointer relative overflow-hidden h-[180px] flex flex-col"
     >
-      <div className="h-1 w-full" style={{ backgroundColor: item.color }} />
-      <div className="p-4">
+      <div className="h-1 w-full flex-shrink-0" style={{ backgroundColor: item.color }} />
+      <div className="p-4 flex-1 flex flex-col">
         <div className="flex items-start justify-between gap-2">
           <span className="text-2xl">{item.icon}</span>
           <div className="relative" ref={menuRef}>
@@ -661,9 +667,9 @@ export default function ProductionPage() {
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
                 {currentItems.map((item) => (
                   renamingId === item.id ? (
-                    <div key={item.id} className="bg-white rounded-xl border-2 border-blue-400 overflow-hidden">
-                      <div className="h-1 w-full" style={{ backgroundColor: item.color }} />
-                      <div className="p-4">
+                    <div key={item.id} className="bg-white rounded-xl border-2 border-blue-400 overflow-hidden h-[180px] flex flex-col">
+                      <div className="h-1 w-full flex-shrink-0" style={{ backgroundColor: item.color }} />
+                      <div className="p-4 flex-1 flex flex-col">
                         <span className="text-2xl">{item.icon}</span>
                         <input
                           autoFocus
@@ -689,7 +695,7 @@ export default function ProductionPage() {
                 <div className="relative" ref={newMenuRef}>
                   <button
                     onClick={() => setShowNewMenu(!showNewMenu)}
-                    className="w-full h-full min-h-[120px] flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-zinc-300 text-zinc-400 hover:border-blue-400 hover:text-blue-500 hover:bg-blue-50/50 transition-colors"
+                    className="w-full h-[180px] flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-zinc-300 text-zinc-400 hover:border-blue-400 hover:text-blue-500 hover:bg-blue-50/50 transition-colors"
                   >
                     <svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" /></svg>
                     <span className="text-xs font-semibold">New</span>
