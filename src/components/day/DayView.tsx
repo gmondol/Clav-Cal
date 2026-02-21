@@ -57,7 +57,7 @@ function DayEventBlock({
     top: `${(topOffset / 30) * 40}px`,
     height: `${(height / 30) * 40}px`,
     minHeight: '32px',
-    backgroundColor: event.confirmed ? hexToRgba(event.color || '#000000', 0.08) : '#ffffff',
+    backgroundColor: event.confirmed ? hexToRgba(event.color || '#000000', 0.08) : '#f4f4f5',
     border: `1px solid ${event.color}`,
     borderLeftWidth: event.confirmed ? 6 : 3,
   };

@@ -102,6 +102,8 @@ function ContentCard({
     data: { type: 'content-note', note },
   });
 
+  const displayColor = (note.tags.length > 0 && TAG_DEFAULT_COLORS[note.tags[0]]) ? TAG_DEFAULT_COLORS[note.tags[0]] : (note.color || '#d4d4d8');
+
   return (
     <div
       ref={setNodeRef}
@@ -109,7 +111,7 @@ function ContentCard({
       {...listeners}
       className={`bg-white rounded-lg p-4 min-h-[7rem] cursor-grab active:cursor-grabbing group hover:shadow-sm transition-shadow ${isDragging ? 'opacity-50' : ''}`}
       style={{
-        border: `1.5px solid ${note.color || '#d4d4d8'}`,
+        border: `1.5px solid ${displayColor}`,
       }}
       onClick={(e) => {
         e.stopPropagation();
@@ -131,7 +133,7 @@ function ContentCard({
               ))}
             </div>
           )}
-          <h4 className="text-sm font-semibold leading-tight truncate" style={{ color: note.color }}>
+          <h4 className="text-sm font-semibold leading-tight truncate" style={{ color: displayColor }}>
             {note.title}
           </h4>
         </div>
@@ -550,6 +552,9 @@ function CollabEditor({
     note?.collabProfiles?.length ? [...note.collabProfiles] : [{ ...EMPTY_PROFILE }]
   );
   const [showTagPicker, setShowTagPicker] = useState(false);
+  const [collapsedProfiles, setCollapsedProfiles] = useState<Set<number>>(
+    () => new Set(note?.collabProfiles?.length ? note.collabProfiles.map((_, i) => i) : [])
+  );
 
   const updateProfile = (index: number, updates: Partial<CollabProfile>) => {
     setProfiles((prev) => prev.map((p, i) => (i === index ? { ...p, ...updates } : p)));
@@ -599,61 +604,126 @@ function CollabEditor({
         />
 
         <div className="space-y-3 max-h-[40vh] overflow-y-auto pr-1">
-          {profiles.map((profile, idx) => (
-            <div key={idx} className="p-3 rounded-lg border border-border-light bg-zinc-50/50 space-y-2">
-              <div className="flex items-center justify-between gap-2">
-                <span className="text-[10px] font-semibold text-muted uppercase">Profile {idx + 1}</span>
-                <div className="flex gap-1">
-                  {profiles.length > 1 && (
-                    <button type="button" onClick={() => removeProfile(idx)} className="text-[10px] text-red-500 hover:text-red-600">
-                      Remove
-                    </button>
-                  )}
-                </div>
-              </div>
-              <div className="flex gap-2">
-                <div className="flex-shrink-0 w-12 h-12 rounded-full overflow-hidden bg-zinc-200 flex items-center justify-center">
-                  {profile.profilePicUrl ? (
-                    <img src={profile.profilePicUrl} alt="" className="w-full h-full object-cover" />
-                  ) : (
-                    <svg width="20" height="20" fill="none" stroke="#a1a1aa" strokeWidth="2" viewBox="0 0 24 24">
-                      <path d="M12 5v14M5 12h14" />
-                    </svg>
-                  )}
-                </div>
-                <div className="flex-1 min-w-0 space-y-1.5">
-                  <input
-                    value={profile.name}
-                    onChange={(e) => updateProfile(idx, { name: e.target.value })}
-                    placeholder="Name"
-                    className="w-full text-xs bg-white border border-border-light rounded px-2 py-1 outline-none placeholder:text-zinc-300"
-                  />
-                </div>
-              </div>
-              <SocialLinkToggles profile={profile} onUpdate={(updates) => updateProfile(idx, updates)} />
-              <div className="flex gap-2 items-end">
-                <textarea
-                  value={profile.notes ?? ''}
-                  onChange={(e) => updateProfile(idx, { notes: e.target.value || undefined })}
-                  placeholder="Notes about this person"
-                  rows={2}
-                  className="flex-1 text-[10px] bg-white border border-border-light rounded px-2 py-1 outline-none resize-none placeholder:text-zinc-300"
-                />
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (profile.name.trim()) {
-                      updateProfile(idx, { ...profile });
-                    }
-                  }}
-                  disabled={!profile.name.trim()}
-                  className="px-3 py-1.5 text-[10px] font-semibold bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-40 transition-colors flex-shrink-0"
+          {profiles.map((profile, idx) => {
+            const isCollapsed = collapsedProfiles.has(idx);
+
+            if (isCollapsed && profile.name.trim()) {
+              return (
+                <div
+                  key={idx}
+                  className="p-3 rounded-lg border border-border-light bg-zinc-50/50 cursor-pointer hover:bg-zinc-100/80 transition-colors"
+                  onClick={() => setCollapsedProfiles((prev) => { const next = new Set(prev); next.delete(idx); return next; })}
                 >
-                  Save
-                </button>
+                  <div className="flex items-center gap-3">
+                    <div className="flex-shrink-0 w-10 h-10 rounded-full overflow-hidden bg-zinc-200 flex items-center justify-center">
+                      {profile.profilePicUrl ? (
+                        <img src={profile.profilePicUrl} alt="" className="w-full h-full object-cover" />
+                      ) : (
+                        <span className="text-sm text-zinc-400">👤</span>
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-semibold text-foreground truncate">{profile.name}</p>
+                      <div className="flex items-center gap-2 mt-1 flex-wrap">
+                        {profile.twitchUrl && (
+                          <span className="text-[9px] px-1.5 py-0.5 rounded bg-purple-100 text-purple-600 font-medium">
+                            Twitch{profile.twitchFollowers ? ` · ${profile.twitchFollowers}` : ''}
+                          </span>
+                        )}
+                        {profile.kickUrl && (
+                          <span className="text-[9px] px-1.5 py-0.5 rounded bg-green-100 text-green-600 font-medium">
+                            Kick{profile.kickFollowers ? ` · ${profile.kickFollowers}` : ''}
+                          </span>
+                        )}
+                        {profile.igUrl && (
+                          <span className="text-[9px] px-1.5 py-0.5 rounded bg-pink-100 text-pink-600 font-medium">
+                            IG{profile.igFollowers ? ` · ${profile.igFollowers}` : ''}
+                          </span>
+                        )}
+                        {profile.tiktokUrl && (
+                          <span className="text-[9px] px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-100 font-medium">
+                            TikTok{profile.tiktokFollowers ? ` · ${profile.tiktokFollowers}` : ''}
+                          </span>
+                        )}
+                        {profile.twitterUrl && (
+                          <span className="text-[9px] px-1.5 py-0.5 rounded bg-zinc-200 text-zinc-600 font-medium">
+                            X{profile.twitterFollowers ? ` · ${profile.twitterFollowers}` : ''}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex gap-1 flex-shrink-0">
+                      {profiles.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={(e) => { e.stopPropagation(); removeProfile(idx); setCollapsedProfiles((prev) => { const next = new Set(prev); next.delete(idx); return next; }); }}
+                          className="text-[10px] text-red-400 hover:text-red-600"
+                        >
+                          Remove
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            }
+
+            return (
+              <div key={idx} className="p-3 rounded-lg border border-border-light bg-zinc-50/50 space-y-2">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-[10px] font-semibold text-muted uppercase">Profile {idx + 1}</span>
+                  <div className="flex gap-1">
+                    {profiles.length > 1 && (
+                      <button type="button" onClick={() => removeProfile(idx)} className="text-[10px] text-red-500 hover:text-red-600">
+                        Remove
+                      </button>
+                    )}
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <div className="flex-shrink-0 w-12 h-12 rounded-full overflow-hidden bg-zinc-200 flex items-center justify-center">
+                    {profile.profilePicUrl ? (
+                      <img src={profile.profilePicUrl} alt="" className="w-full h-full object-cover" />
+                    ) : (
+                      <svg width="20" height="20" fill="none" stroke="#a1a1aa" strokeWidth="2" viewBox="0 0 24 24">
+                        <path d="M12 5v14M5 12h14" />
+                      </svg>
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0 space-y-1.5">
+                    <input
+                      value={profile.name}
+                      onChange={(e) => updateProfile(idx, { name: e.target.value })}
+                      placeholder="Name"
+                      className="w-full text-xs bg-white border border-border-light rounded px-2 py-1 outline-none placeholder:text-zinc-300"
+                    />
+                  </div>
+                </div>
+                <SocialLinkToggles profile={profile} onUpdate={(updates) => updateProfile(idx, updates)} />
+                <div className="flex gap-2 items-end">
+                  <textarea
+                    value={profile.notes ?? ''}
+                    onChange={(e) => updateProfile(idx, { notes: e.target.value || undefined })}
+                    placeholder="Notes about this person"
+                    rows={2}
+                    className="flex-1 text-[10px] bg-white border border-border-light rounded px-2 py-1 outline-none resize-none placeholder:text-zinc-300"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (profile.name.trim()) {
+                        setCollapsedProfiles((prev) => new Set(prev).add(idx));
+                      }
+                    }}
+                    disabled={!profile.name.trim()}
+                    className="px-3 py-1.5 text-[10px] font-semibold bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-40 transition-colors flex-shrink-0"
+                  >
+                    Save
+                  </button>
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
 
         <button type="button" onClick={addProfile} className="w-full py-2 text-[11px] font-medium text-blue-500 border border-dashed border-blue-300 rounded-lg hover:bg-blue-50/50 transition-colors">

@@ -41,7 +41,6 @@ export default function EventEditor({
   const [confirmed, setConfirmed] = useState(event?.confirmed ?? false);
   const [attachments, setAttachments] = useState<string[]>(event?.attachments ?? []);
   const [uploading, setUploading] = useState(false);
-  const [showTagPicker, setShowTagPicker] = useState(false);
   const [overlapError, setOverlapError] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -70,9 +69,12 @@ export default function EventEditor({
 
   const toggleTag = (tag: string) => {
     const wasActive = tags.includes(tag);
-    setTags((prev) => (wasActive ? prev.filter((t) => t !== tag) : [...prev, tag]));
-    if (!wasActive && TAG_DEFAULT_COLORS[tag]) {
-      setColor(TAG_DEFAULT_COLORS[tag]);
+    if (wasActive) {
+      setTags([]);
+      setColor('#000000');
+    } else {
+      setTags([tag]);
+      if (TAG_DEFAULT_COLORS[tag]) setColor(TAG_DEFAULT_COLORS[tag]);
     }
   };
 
@@ -185,41 +187,25 @@ export default function EventEditor({
       <div>
         <label className="text-[10px] font-semibold text-muted uppercase tracking-wider mb-1 block">Tag</label>
         <div className="flex items-center gap-1.5 flex-wrap">
-          {tags.map((tag) => (
-            <TagBadge
-              key={tag}
-              tag={tag}
-              color={TAG_DEFAULT_COLORS[tag]}
-              active
-              onClick={() => toggleTag(tag)}
-              size="sm"
-            />
-          ))}
-          <div className="relative">
-            <button
-              type="button"
-              onClick={() => setShowTagPicker(!showTagPicker)}
-              className="text-[9px] px-1.5 py-0.5 rounded-full border border-dashed border-zinc-300 text-zinc-400 hover:border-zinc-400 hover:text-zinc-600 transition-colors font-medium"
-            >
-              + Add Tag
-            </button>
-            {showTagPicker && (
-              <div className="absolute top-full left-0 mt-1 bg-white rounded-lg border border-border shadow-lg p-2 z-10 flex flex-wrap gap-1.5 min-w-[160px]">
-                {PRESET_TAGS.filter((t) => !tags.includes(t)).map((tag) => (
-                  <TagBadge
-                    key={tag}
-                    tag={tag}
-                    color={TAG_DEFAULT_COLORS[tag]}
-                    onClick={() => { toggleTag(tag); setShowTagPicker(false); }}
-                    size="sm"
-                  />
-                ))}
-                {PRESET_TAGS.filter((t) => !tags.includes(t)).length === 0 && (
-                  <span className="text-[10px] text-muted">All tags added</span>
-                )}
-              </div>
-            )}
-          </div>
+          {PRESET_TAGS.map((tag) => {
+            const isActive = tags.includes(tag);
+            const tagColor = TAG_DEFAULT_COLORS[tag];
+            return (
+              <button
+                key={tag}
+                type="button"
+                onClick={() => toggleTag(tag)}
+                className="text-[10px] px-2 py-0.5 rounded-full font-medium transition-all cursor-pointer"
+                style={
+                  isActive
+                    ? { backgroundColor: tagColor, color: '#fff', boxShadow: `0 0 0 1px ${tagColor}` }
+                    : { backgroundColor: tagColor + '18', color: tagColor, opacity: tags.length > 0 ? 0.4 : 1 }
+                }
+              >
+                {tag}
+              </button>
+            );
+          })}
         </div>
       </div>
 

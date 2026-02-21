@@ -26,7 +26,7 @@ export default function EventChip({ event, hasConflict, compact, scaled, onClick
     transform: CSS.Transform.toString(transform) ?? undefined,
     transition: transition ?? undefined,
     opacity: isDragging ? 0.4 : 1,
-    backgroundColor: event.confirmed ? event.color : '#ffffff',
+    backgroundColor: event.confirmed ? event.color : event.color + '18',
     color: event.confirmed ? '#ffffff' : event.color,
     border: `1px solid ${event.color}`,
     borderLeftWidth: event.confirmed ? 1 : 3,

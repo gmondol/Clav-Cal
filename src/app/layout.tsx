@@ -10,6 +10,10 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: 'StreamSchedule — Content Calendar',
   description: 'Plan and organize your streaming content with drag-and-drop scheduling',
+  icons: {
+    icon: '/Favicon.png',
+    apple: '/Favicon.png',
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
