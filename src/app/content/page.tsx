@@ -109,9 +109,10 @@ function ContentCard({
       ref={setNodeRef}
       {...attributes}
       {...listeners}
-      className={`bg-white rounded-lg p-4 min-h-[7rem] cursor-grab active:cursor-grabbing group hover:shadow-sm transition-shadow ${isDragging ? 'opacity-50' : ''}`}
+      className={`rounded-lg p-4 min-h-[7rem] cursor-grab active:cursor-grabbing group hover:shadow-sm transition-shadow ${isDragging ? 'opacity-50' : ''}`}
       style={{
         border: `1.5px solid ${displayColor}`,
+        backgroundColor: displayColor + '18',
       }}
       onClick={(e) => {
         e.stopPropagation();

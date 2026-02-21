@@ -11,6 +11,10 @@ import {
 import { generateId, generateWeeklySummary } from '@/lib/utils';
 import { supabase } from '@/lib/supabase';
 
+function sbLog(label: string, res: { error: { message: string } | null }) {
+  if (res.error) console.error(`[Supabase ${label}]`, res.error.message);
+}
+
 interface StoreState {
   currentView: CalendarView;
   selectedDate: string;
@@ -167,7 +171,7 @@ export const useStore = create<StoreState>()(
       const id = generateId();
       const full: ScratchNote = { ...note, id, createdAt: new Date().toISOString() };
       set((s) => ({ notes: [full, ...s.notes] }));
-      supabase.from('notes').insert(noteToRow(full)).then();
+      supabase.from('notes').insert(noteToRow(full)).then((r) => sbLog('insert note', r));
       return id;
     },
 
@@ -197,13 +201,13 @@ export const useStore = create<StoreState>()(
       if (updates.contact !== undefined) row.contact = updates.contact || null;
       if (updates.attachments !== undefined) row.attachments = updates.attachments;
       if (Object.keys(row).length > 0) {
-        supabase.from('notes').update(row).eq('id', id).then();
+        supabase.from('notes').update(row).eq('id', id).then((r) => sbLog('update note', r));
       }
     },
 
     deleteNote: (id) => {
       set((s) => ({ notes: s.notes.filter((n) => n.id !== id) }));
-      supabase.from('notes').delete().eq('id', id).then();
+      supabase.from('notes').delete().eq('id', id).then((r) => sbLog('delete note', r));
     },
 
     archiveNote: (id) => {
@@ -213,7 +217,7 @@ export const useStore = create<StoreState>()(
       set((s) => ({
         notes: s.notes.map((n) => (n.id === id ? { ...n, archived: newArchived } : n)),
       }));
-      supabase.from('notes').update({ archived: newArchived }).eq('id', id).then();
+      supabase.from('notes').update({ archived: newArchived }).eq('id', id).then((r) => sbLog('archive note', r));
     },
 
     reorderNotes: (activeId, overId) =>
@@ -225,7 +229,7 @@ export const useStore = create<StoreState>()(
         const [item] = notes.splice(oldIndex, 1);
         notes.splice(newIndex, 0, item);
         notes.forEach((n, i) => {
-          supabase.from('notes').update({ sort_order: i }).eq('id', n.id).then();
+          supabase.from('notes').update({ sort_order: i }).eq('id', n.id).then((r) => sbLog('reorder note', r));
         });
         return { notes };
       }),
@@ -242,7 +246,7 @@ export const useStore = create<StoreState>()(
       if (newNotes.length > 0) {
         set((s) => ({ notes: [...newNotes, ...s.notes] }));
         newNotes.forEach((n) => {
-          supabase.from('notes').insert(noteToRow(n)).then();
+          supabase.from('notes').insert(noteToRow(n)).then((r) => sbLog('insert template', r));
         });
       }
     },
@@ -251,7 +255,7 @@ export const useStore = create<StoreState>()(
       const id = generateId();
       const full: CalendarEvent = { ...event, id };
       set((s) => ({ events: [...s.events, full] }));
-      supabase.from('events').insert(eventToRow(full)).then();
+      supabase.from('events').insert(eventToRow(full)).then((r) => sbLog('insert event', r));
       return id;
     },
 
@@ -273,20 +277,20 @@ export const useStore = create<StoreState>()(
       if (updates.confirmed !== undefined) row.confirmed = updates.confirmed;
       if (updates.attachments !== undefined) row.attachments = updates.attachments;
       if (Object.keys(row).length > 0) {
-        supabase.from('events').update(row).eq('id', id).then();
+        supabase.from('events').update(row).eq('id', id).then((r) => sbLog('update event', r));
       }
     },
 
     deleteEvent: (id) => {
       set((s) => ({ events: s.events.filter((e) => e.id !== id) }));
-      supabase.from('events').delete().eq('id', id).then();
+      supabase.from('events').delete().eq('id', id).then((r) => sbLog('delete event', r));
     },
 
     moveEvent: (id, newDate) => {
       set((s) => ({
         events: s.events.map((e) => (e.id === id ? { ...e, date: newDate } : e)),
       }));
-      supabase.from('events').update({ date: newDate }).eq('id', id).then();
+      supabase.from('events').update({ date: newDate }).eq('id', id).then((r) => sbLog('move event', r));
     },
 
     reorderEventsInDay: (activeId, overId) =>
@@ -301,8 +305,8 @@ export const useStore = create<StoreState>()(
           if (e.id === overId) return { ...e, startTime: swapTime.startTime, endTime: swapTime.endTime };
           return e;
         });
-        supabase.from('events').update({ start_time: overEvent.startTime, end_time: overEvent.endTime }).eq('id', activeId).then();
-        supabase.from('events').update({ start_time: swapTime.startTime, end_time: swapTime.endTime }).eq('id', overId).then();
+        supabase.from('events').update({ start_time: overEvent.startTime, end_time: overEvent.endTime }).eq('id', activeId).then((r) => sbLog('swap event', r));
+        supabase.from('events').update({ start_time: swapTime.startTime, end_time: swapTime.endTime }).eq('id', overId).then((r) => sbLog('swap event', r));
         return { events: newEvents };
       }),
 
@@ -330,9 +334,9 @@ export const useStore = create<StoreState>()(
         usedNoteIds: s.usedNoteIds.includes(noteId) ? s.usedNoteIds : [...s.usedNoteIds, noteId],
         notes: note.keepInScratch ? s.notes : s.notes.filter((n) => n.id !== noteId),
       }));
-      supabase.from('events').insert(eventToRow(event)).then();
+      supabase.from('events').insert(eventToRow(event)).then((r) => sbLog('schedule event', r));
       if (!note.keepInScratch) {
-        supabase.from('notes').delete().eq('id', noteId).then();
+        supabase.from('notes').delete().eq('id', noteId).then((r) => sbLog('delete scheduled note', r));
       }
       return eventId;
     },
