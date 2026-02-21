@@ -161,11 +161,7 @@ function ContentCard({
               title="Move to Approved"
             >
               <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                {note.status === 'workshop' ? (
-                  <path d="M19 12H5M12 19l-7-7 7-7" />
-                ) : (
-                  <path d="M5 12h14M12 5l7 7-7 7" />
-                )}
+                <path d="M5 12h14M12 5l7 7-7 7" />
               </svg>
             </button>
           ) : (
@@ -175,11 +171,7 @@ function ContentCard({
               title={(note.collabProfiles?.length ?? 0) > 0 ? 'Move back to Collabs' : 'Move back to Ideas'}
             >
               <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                {(note.collabProfiles?.length ?? 0) > 0 ? (
-                  <path d="M5 12h14M12 5l7 7-7 7" />
-                ) : (
-                  <path d="M19 12H5M12 19l-7-7 7-7" />
-                )}
+                <path d="M19 12H5M12 19l-7-7 7-7" />
               </svg>
             </button>
           )}
@@ -238,11 +230,6 @@ function ContentCard({
           })()}
         </div>
       )}
-      <div className="flex items-center gap-1 flex-wrap">
-        {note.tags.map((tag) => (
-          <TagBadge key={tag} tag={tag} color={TAG_DEFAULT_COLORS[tag]} size="sm" />
-        ))}
-      </div>
       {collabNames.length > 0 && (
         <div className="flex items-center gap-1.5 mt-2 pt-2 border-t border-dashed" style={{ borderColor: displayColor + '30' }}>
           <svg width="10" height="10" fill="none" stroke={displayColor} strokeWidth="2" viewBox="0 0 24 24" className="flex-shrink-0 opacity-60">
