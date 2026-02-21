@@ -223,11 +223,13 @@ function NoteEditor({
   onSave,
   onCancel,
   onDelete,
+  allNotes = [],
 }: {
   note?: ScratchNote;
   onSave: (data: Partial<ScratchNote> & { title: string; color: string }) => void;
   onCancel: () => void;
   onDelete?: () => void;
+  allNotes?: ScratchNote[];
 }) {
   const [title, setTitle] = useState(note?.title ?? '');
   const [description, setDescription] = useState(note?.description ?? '');
@@ -238,9 +240,32 @@ function NoteEditor({
   const [contact, setContact] = useState(note?.contact ?? '');
   const [attachments, setAttachments] = useState<string[]>(note?.attachments ?? []);
   const [uploading, setUploading] = useState(false);
+  const [linkedCollabIds, setLinkedCollabIds] = useState<string[]>(note?.linkedCollabIds ?? []);
+  const [showCollabPicker, setShowCollabPicker] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const status = note?.status ?? 'idea';
   const isApproved = status === 'ready';
+
+  const availableCollabs = allNotes.filter(
+    (n) => n.status === 'workshop' && (n.collabProfiles?.length ?? 0) > 0 && !linkedCollabIds.includes(n.id)
+  );
+  const linkedCollabs = allNotes.filter((n) => linkedCollabIds.includes(n.id));
+
+  const attachCollab = (collabId: string) => {
+    setLinkedCollabIds((prev) => [...prev, collabId]);
+    setTags(['Collab']);
+    if (TAG_DEFAULT_COLORS['Collab']) setColor(TAG_DEFAULT_COLORS['Collab']);
+    setShowCollabPicker(false);
+  };
+
+  const detachCollab = (collabId: string) => {
+    const next = linkedCollabIds.filter((id) => id !== collabId);
+    setLinkedCollabIds(next);
+    if (next.length === 0) {
+      setTags([]);
+      setColor('#000000');
+    }
+  };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -289,6 +314,7 @@ function NoteEditor({
       address: address.trim() || undefined,
       contact: contact.trim() || undefined,
       attachments,
+      linkedCollabIds,
     });
   };
 
@@ -357,40 +383,112 @@ function NoteEditor({
               className="w-full text-xs bg-zinc-50 rounded-md border border-border-light p-2 outline-none placeholder:text-zinc-300 focus:border-primary/30"
             />
 
-            <div>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                multiple
-                onChange={handleFileUpload}
-                className="hidden"
-              />
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                disabled={uploading}
-                className="w-full text-xs bg-white rounded-md border border-dashed border-blue-400 p-2 text-blue-500 font-medium hover:border-blue-500 hover:text-blue-600 hover:bg-blue-50 transition-colors flex items-center justify-center gap-1.5"
-              >
-                {uploading ? 'Uploading...' : '📎 Attach Files'}
-              </button>
-              {attachments.length > 0 && (
-                <div className="flex flex-wrap gap-2 mt-2">
-                  {attachments.map((url) => (
-                    <div key={url} className="relative group">
-                      <img src={url} alt="Attachment" className="w-14 h-14 rounded-md object-cover border border-border-light" />
+            {/* Attached Collabs */}
+            {linkedCollabs.length > 0 && (
+              <div className="space-y-1.5">
+                {linkedCollabs.map((collab) => {
+                  const profiles = collab.collabProfiles ?? [];
+                  const profileNames = profiles.map((p) => p.name).filter(Boolean).join(', ');
+                  return (
+                    <div key={collab.id} className="flex items-center gap-2 px-2.5 py-1.5 bg-purple-50 border border-purple-200 rounded-lg">
+                      <div className="flex -space-x-1.5 flex-shrink-0">
+                        {profiles.slice(0, 3).map((p, i) => (
+                          <div key={i} className="w-5 h-5 rounded-full overflow-hidden bg-purple-200 border border-white flex items-center justify-center">
+                            {p.profilePicUrl ? (
+                              <img src={p.profilePicUrl} alt={p.name} className="w-full h-full object-cover" />
+                            ) : (
+                              <span className="text-[8px] text-purple-600">{p.name?.[0]?.toUpperCase()}</span>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                      <span className="text-[11px] font-medium text-purple-700 truncate flex-1">{collab.title || profileNames}</span>
                       <button
                         type="button"
-                        onClick={() => removeAttachment(url)}
-                        className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white rounded-full text-[8px] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                        onClick={() => detachCollab(collab.id)}
+                        className="text-[10px] text-red-400 hover:text-red-600 font-medium flex-shrink-0 transition-colors"
                       >
-                        ✕
+                        Detach
                       </button>
                     </div>
-                  ))}
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Attach Collab Button + Picker */}
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setShowCollabPicker(!showCollabPicker)}
+                className="w-full text-xs rounded-md border border-dashed border-red-400 p-2 text-red-500 font-medium hover:border-red-500 hover:text-red-600 hover:bg-red-50 transition-colors flex items-center justify-center gap-1.5"
+              >
+                🤝 Attach a Collab
+              </button>
+              {showCollabPicker && (
+                <div className="absolute left-0 right-0 top-full mt-1 bg-white border border-border rounded-lg shadow-lg z-10 max-h-48 overflow-y-auto">
+                  {availableCollabs.length === 0 ? (
+                    <p className="text-[11px] text-zinc-400 p-3 text-center">No collabs available</p>
+                  ) : (
+                    availableCollabs.map((collab) => {
+                      const profiles = collab.collabProfiles ?? [];
+                      const profileNames = profiles.map((p) => p.name).filter(Boolean).join(', ');
+                      return (
+                        <button
+                          key={collab.id}
+                          type="button"
+                          onClick={() => attachCollab(collab.id)}
+                          className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-purple-50 transition-colors border-b border-border-light last:border-b-0"
+                        >
+                          <div className="flex -space-x-1.5 flex-shrink-0">
+                            {profiles.slice(0, 3).map((p, i) => (
+                              <div key={i} className="w-5 h-5 rounded-full overflow-hidden bg-purple-200 border border-white flex items-center justify-center">
+                                {p.profilePicUrl ? (
+                                  <img src={p.profilePicUrl} alt={p.name} className="w-full h-full object-cover" />
+                                ) : (
+                                  <span className="text-[8px] text-purple-600">{p.name?.[0]?.toUpperCase()}</span>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-[11px] font-medium text-zinc-800 truncate">{collab.title || profileNames}</p>
+                            {collab.title && profileNames && (
+                              <p className="text-[10px] text-zinc-400 truncate">{profileNames}</p>
+                            )}
+                          </div>
+                        </button>
+                      );
+                    })
+                  )}
                 </div>
               )}
             </div>
+
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              multiple
+              onChange={handleFileUpload}
+              className="hidden"
+            />
+            {attachments.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {attachments.map((url) => (
+                  <div key={url} className="relative group">
+                    <img src={url} alt="Attachment" className="w-14 h-14 rounded-md object-cover border border-border-light" />
+                    <button
+                      type="button"
+                      onClick={() => removeAttachment(url)}
+                      className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white rounded-full text-[8px] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </>
         )}
 
@@ -409,6 +507,16 @@ function NoteEditor({
           >
             Cancel
           </button>
+          {status === 'ready' && (
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploading}
+              className="px-3 py-2 text-xs text-blue-500 font-medium bg-white border border-dashed border-blue-400 rounded-lg hover:border-blue-500 hover:text-blue-600 hover:bg-blue-50 transition-colors"
+            >
+              {uploading ? '...' : '📎'}
+            </button>
+          )}
           {onDelete && note && (
             <button
               type="button"
@@ -1055,6 +1163,7 @@ export default function ContentPage() {
           onSave={handleSave}
           onCancel={() => { setShowNewForm(false); setEditingNote(null); }}
           onDelete={editingNote ? () => { deleteNote(editingNote.id); setEditingNote(null); setShowNewForm(false); } : undefined}
+          allNotes={notes}
         />
       ) : null}
     </div>

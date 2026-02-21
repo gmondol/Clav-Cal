@@ -69,6 +69,7 @@ function noteToRow(note: ScratchNote) {
     address: note.address ?? null,
     contact: note.contact ?? null,
     attachments: note.attachments ?? [],
+    linked_collab_ids: note.linkedCollabIds ?? [],
   };
 }
 
@@ -102,6 +103,7 @@ function rowToNote(row: Record<string, unknown>): ScratchNote {
     address: (row.address as string) ?? undefined,
     contact: (row.contact as string) ?? undefined,
     attachments: (row.attachments as string[]) ?? [],
+    linkedCollabIds: (row.linked_collab_ids as string[]) ?? [],
   };
 }
 
@@ -200,6 +202,7 @@ export const useStore = create<StoreState>()(
       if (updates.address !== undefined) row.address = updates.address || null;
       if (updates.contact !== undefined) row.contact = updates.contact || null;
       if (updates.attachments !== undefined) row.attachments = updates.attachments;
+      if (updates.linkedCollabIds !== undefined) row.linked_collab_ids = updates.linkedCollabIds;
       if (Object.keys(row).length > 0) {
         supabase.from('notes').update(row).eq('id', id).then((r) => sbLog('update note', r));
       }

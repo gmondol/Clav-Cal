@@ -48,6 +48,7 @@ export interface ScratchNote {
   address?: string;
   contact?: string;
   attachments?: string[];
+  linkedCollabIds?: string[];
 }
 
 export interface CalendarEvent {

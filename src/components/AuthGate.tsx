@@ -50,8 +50,7 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
           onSubmit={handleSubmit}
           className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-sm flex flex-col items-center gap-5"
         >
-          <img src="/Favicon.png" alt="Clav Cal" className="w-20 h-20 object-contain" />
-          <h1 className="text-lg font-bold text-zinc-800 tracking-tight">Welcome to Clav-Cal</h1>
+          <img src="/Favicon.png" alt="Clav Cal" className="w-48 h-48 object-contain" />
           <p className="text-xs text-zinc-500 -mt-3">Enter password to continue</p>
           <input
             type="password"
