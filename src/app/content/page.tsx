@@ -125,11 +125,11 @@ function ContentCard({
           {note.collabProfiles && note.collabProfiles.length > 0 && (
             <div className="flex -space-x-2 flex-shrink-0">
               {note.collabProfiles.slice(0, 3).map((p, i) => (
-                <div key={i} className="w-6 h-6 rounded-full overflow-hidden bg-zinc-200 border-2 border-white flex items-center justify-center">
+                <div key={i} className="w-6 h-6 rounded-full overflow-hidden bg-purple-200 border-2 border-white flex items-center justify-center">
                   {p.profilePicUrl ? (
                     <img src={p.profilePicUrl} alt="" className="w-full h-full object-cover" />
                   ) : (
-                    <span className="text-[10px] text-zinc-400">👤</span>
+                    <span className="text-[10px] font-bold text-purple-600">{p.name?.[0]?.toUpperCase() || '?'}</span>
                   )}
                 </div>
               ))}
