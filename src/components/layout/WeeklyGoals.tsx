@@ -11,6 +11,8 @@ export default function WeeklyGoals() {
   const selectedDate = useStore((s) => s.selectedDate);
   const currentView = useStore((s) => s.currentView);
 
+  const customTags = useStore((s) => s.customTags);
+
   const { filteredEvents, tagCounts, label, totalHours, tagOrder } = useMemo(() => {
     const parsed = new Date(selectedDate + 'T00:00:00');
     const date = isNaN(parsed.getTime()) ? new Date() : parsed;
@@ -29,20 +31,24 @@ export default function WeeklyGoals() {
     }
 
     const filteredEvents = events.filter((e) => e.date >= rangeStart && e.date <= rangeEnd);
+
+    const knownTags = new Set<string>([
+      ...(PRESET_TAGS as unknown as string[]),
+      ...customTags.map((t) => t.name),
+    ]);
+
     const tagCounts: Record<string, number> = {};
-    const allTags = new Set<string>(PRESET_TAGS as unknown as string[]);
-    for (const e of filteredEvents) {
-      for (const t of e.tags) allTags.add(t);
+    for (const tag of knownTags) {
+      const count = filteredEvents.filter((e) => e.tags.includes(tag)).length;
+      if (count > 0) tagCounts[tag] = count;
     }
-    for (const tag of allTags) {
-      tagCounts[tag] = filteredEvents.filter((e) => e.tags.includes(tag)).length;
-    }
+
     const totalHours = filteredEvents.reduce((sum, e) => {
       return sum + (timeToMinutes(e.endTime) - timeToMinutes(e.startTime)) / 60;
     }, 0);
-    const tagOrder = [...PRESET_TAGS, ...[...allTags].filter((t) => !PRESET_TAGS.includes(t as typeof PRESET_TAGS[number])).sort()];
+    const tagOrder = [...PRESET_TAGS.filter((t) => t in tagCounts), ...customTags.map((t) => t.name).filter((t) => t in tagCounts).sort()];
     return { filteredEvents, tagCounts, label, totalHours, tagOrder };
-  }, [events, selectedDate, currentView]);
+  }, [events, selectedDate, currentView, customTags]);
 
   return (
     <div className="flex flex-wrap md:flex-nowrap items-center gap-2 md:gap-4 px-3 md:px-6 py-2 bg-surface border-b border-border overflow-x-auto">
