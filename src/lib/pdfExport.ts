@@ -1,6 +1,6 @@
 import { jsPDF } from 'jspdf';
 import { format, parse, startOfWeek, endOfWeek, startOfMonth, endOfMonth } from 'date-fns';
-import { CalendarEvent } from './types';
+import { CalendarEvent, ScratchNote, TAG_DEFAULT_COLORS } from './types';
 import { formatTimeDisplay, timeToMinutes } from './utils';
 
 type SummaryType = 'daily' | 'weekly' | 'monthly';
@@ -173,4 +173,154 @@ export async function generateSchedulePDF(
 
   const filename = `clav-schedule-${type}-${selectedDate}.pdf`;
   doc.save(filename);
+}
+
+export type ContentColumnType = 'idea' | 'ready' | 'workshop' | 'used';
+
+const COLUMN_LABELS: Record<ContentColumnType, { title: string; emoji: string; headerColor: [number, number, number] }> = {
+  workshop: { title: 'Potential Collabs', emoji: '🤝', headerColor: [139, 92, 246] },
+  idea: { title: 'Ideas', emoji: '💡', headerColor: [245, 158, 11] },
+  ready: { title: 'Approved', emoji: '✅', headerColor: [16, 185, 129] },
+  used: { title: 'Used Content', emoji: '📋', headerColor: [107, 114, 128] },
+};
+
+export async function generateContentPDF(
+  notes: ScratchNote[],
+  columns: ContentColumnType[]
+): Promise<void> {
+  const doc = new jsPDF({ format: 'a4', unit: 'mm' });
+  const pageW = doc.internal.pageSize.getWidth();
+  const pageH = doc.internal.pageSize.getHeight();
+  const margin = 18;
+
+  const faviconData = await loadFavicon();
+
+  doc.setFillColor(37, 99, 235);
+  doc.rect(0, 0, pageW, 36, 'F');
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(22);
+  doc.setFont('helvetica', 'bold');
+  doc.text('Content Workshop', margin, 22);
+  doc.setFontSize(11);
+  doc.setFont('helvetica', 'normal');
+  doc.text(`Exported ${format(new Date(), 'MMM d, yyyy')}`, margin, 30);
+
+  if (faviconData) {
+    doc.addImage(faviconData, 'PNG', pageW - margin - 24, 6, 24, 24);
+  }
+
+  let y = 48;
+
+  columns.forEach((colType, colIdx) => {
+    const config = COLUMN_LABELS[colType];
+    const colNotes = notes.filter((n) => (n.status ?? 'idea') === colType && !n.archived);
+
+    if (colIdx > 0 && y > margin) {
+      y += 6;
+    }
+
+    if (y > pageH - 40) {
+      doc.addPage();
+      y = margin;
+    }
+
+    const [hr, hg, hb] = config.headerColor;
+    doc.setFillColor(hr, hg, hb);
+    doc.roundedRect(margin, y - 5, pageW - margin * 2, 12, 2, 2, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
+    doc.text(`${config.emoji}  ${config.title}  (${colNotes.length})`, margin + 4, y + 3);
+    y += 14;
+
+    if (colNotes.length === 0) {
+      doc.setFont('helvetica', 'italic');
+      doc.setFontSize(9);
+      doc.setTextColor(150, 150, 150);
+      doc.text('No content in this section', margin + 4, y);
+      y += 8;
+    } else {
+      colNotes.forEach((note) => {
+        if (y > pageH - 25) {
+          doc.addPage();
+          y = margin;
+        }
+
+        const tagColor = (note.tags.length > 0 && TAG_DEFAULT_COLORS[note.tags[0]])
+          ? TAG_DEFAULT_COLORS[note.tags[0]]
+          : (note.color || '#000000');
+        const [r, g, b] = hexToRgb(tagColor);
+
+        const lightR = Math.min(255, Math.round(r * 0.15 + 242));
+        const lightG = Math.min(255, Math.round(g * 0.15 + 242));
+        const lightB = Math.min(255, Math.round(b * 0.15 + 242));
+
+        let blockHeight = 12;
+        if (note.description) blockHeight += 5;
+        if (note.tags.length > 0) blockHeight += 5;
+        if (note.address) blockHeight += 4;
+        if (note.contact) blockHeight += 4;
+
+        doc.setFillColor(lightR, lightG, lightB);
+        doc.roundedRect(margin, y - 4, pageW - margin * 2, blockHeight, 1.5, 1.5, 'F');
+
+        doc.setDrawColor(r, g, b);
+        doc.setLineWidth(0.8);
+        doc.line(margin, y - 4, margin, y - 4 + blockHeight);
+
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(r, g, b);
+        doc.text(note.title, margin + 5, y + 2);
+
+        let innerY = y + 2;
+
+        if (note.description) {
+          innerY += 5;
+          doc.setFont('helvetica', 'normal');
+          doc.setFontSize(8);
+          doc.setTextColor(80, 80, 80);
+          const desc = note.description.length > 120 ? note.description.slice(0, 120) + '…' : note.description;
+          doc.text(desc, margin + 5, innerY);
+        }
+
+        if (note.tags.length > 0) {
+          innerY += 5;
+          doc.setFontSize(7);
+          doc.setFont('helvetica', 'bold');
+          note.tags.forEach((tag, i) => {
+            const tc = TAG_DEFAULT_COLORS[tag] || '#666';
+            const [tr, tg, tb] = hexToRgb(tc);
+            doc.setTextColor(tr, tg, tb);
+            const prefix = i > 0 ? '  •  ' : '';
+            doc.text(prefix + tag, margin + 5 + (i > 0 ? i * 25 : 0), innerY);
+          });
+        }
+
+        if (note.address) {
+          innerY += 4;
+          doc.setFont('helvetica', 'normal');
+          doc.setFontSize(7);
+          doc.setTextColor(100, 100, 100);
+          doc.text(`📍 ${note.address}`, margin + 5, innerY);
+        }
+
+        if (note.contact) {
+          innerY += 4;
+          doc.setFont('helvetica', 'normal');
+          doc.setFontSize(7);
+          doc.setTextColor(100, 100, 100);
+          doc.text(`👤 ${note.contact}`, margin + 5, innerY);
+        }
+
+        y += blockHeight + 3;
+      });
+    }
+  });
+
+  doc.setFontSize(8);
+  doc.setTextColor(150, 150, 150);
+  doc.text(`Generated by Clav Content Workshop • ${format(new Date(), 'MMM d, yyyy h:mm a')}`, margin, pageH - 10);
+
+  doc.save(`clav-content-${format(new Date(), 'yyyy-MM-dd')}.pdf`);
 }

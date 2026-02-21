@@ -20,6 +20,7 @@ const NAV_ITEMS = [
   { href: '/content', accent: 'Content', rest: 'Workshop' },
 ] as const;
 import { ScratchNote, NoteStatus, NOTE_STATUSES, PRESET_TAGS, TAG_DEFAULT_COLORS, CollabProfile } from '@/lib/types';
+import { generateContentPDF, ContentColumnType } from '@/lib/pdfExport';
 import TagBadge from '@/components/ui/TagBadge';
 import ColorPicker from '@/components/ui/ColorPicker';
 import { supabase } from '@/lib/supabase';
@@ -945,6 +946,7 @@ export default function ContentPage() {
   const [chatInput, setChatInput] = useState('');
   const [chatLoading, setChatLoading] = useState(false);
   const [navOpen, setNavOpen] = useState(false);
+  const [showContentExport, setShowContentExport] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const navRef = useRef<HTMLDivElement>(null);
   const pathname = usePathname();
@@ -1121,6 +1123,15 @@ export default function ContentPage() {
           })()}
         </div>
 
+        <button
+          onClick={() => setShowContentExport(true)}
+          className="absolute right-6 p-2 rounded-lg hover:bg-zinc-100 text-zinc-500 hover:text-blue-500 transition-colors"
+          title="Download Content PDF"
+        >
+          <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+            <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3" />
+          </svg>
+        </button>
       </header>
 
       <div className="flex-1 overflow-hidden flex gap-4 p-4 bg-white">
@@ -1272,7 +1283,123 @@ export default function ContentPage() {
           allNotes={notes}
         />
       ) : null}
+
+      {showContentExport && (
+        <ContentExportModal notes={notes} onClose={() => setShowContentExport(false)} />
+      )}
     </div>
     </DndContext>
+  );
+}
+
+function ContentExportModal({ notes, onClose }: { notes: ScratchNote[]; onClose: () => void }) {
+  const [selected, setSelected] = useState<Set<ContentColumnType>>(new Set(['idea', 'ready', 'workshop', 'used']));
+  const [downloading, setDownloading] = useState(false);
+
+  const toggle = (col: ContentColumnType) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(col)) next.delete(col); else next.add(col);
+      return next;
+    });
+  };
+
+  const columns: { value: ContentColumnType; label: string; emoji: string; color: string }[] = [
+    { value: 'workshop', label: 'Potential Collabs', emoji: '🤝', color: '#8b5cf6' },
+    { value: 'idea', label: 'Ideas', emoji: '💡', color: '#f59e0b' },
+    { value: 'ready', label: 'Approved', emoji: '✅', color: '#10b981' },
+    { value: 'used', label: 'Used Content', emoji: '📋', color: '#6b7280' },
+  ];
+
+  const handleDownload = async () => {
+    if (selected.size === 0) return;
+    setDownloading(true);
+    try {
+      await generateContentPDF(notes, Array.from(selected));
+      onClose();
+    } catch (err) {
+      console.error('Content PDF export failed:', err);
+    }
+    setDownloading(false);
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm animate-fade-in" onClick={onClose}>
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 animate-scale-in" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between mb-5">
+          <h3 className="text-base font-bold text-foreground">Download Content PDF</h3>
+          <button
+            onClick={onClose}
+            className="p-1.5 rounded-lg hover:bg-zinc-100 text-muted hover:text-foreground transition-colors"
+          >
+            <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+              <path d="M18 6L6 18M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        <p className="text-xs text-muted mb-4">Select which columns to include in your PDF:</p>
+
+        <div className="space-y-2 mb-6">
+          {columns.map((col) => {
+            const isActive = selected.has(col.value);
+            const count = notes.filter((n) => (n.status ?? 'idea') === col.value && !n.archived).length;
+            return (
+              <button
+                key={col.value}
+                onClick={() => toggle(col.value)}
+                className={`w-full flex items-center gap-3 p-3 rounded-xl border-2 transition-all text-left ${
+                  isActive ? 'border-blue-500 bg-blue-50/50' : 'border-border-light hover:bg-zinc-50'
+                }`}
+              >
+                <div
+                  className={`w-5 h-5 rounded flex items-center justify-center text-[10px] font-bold ${
+                    isActive ? 'bg-blue-500 text-white' : 'bg-zinc-200 text-transparent'
+                  }`}
+                >
+                  ✓
+                </div>
+                <span className="text-base">{col.emoji}</span>
+                <div className="flex-1">
+                  <span className="text-sm font-semibold text-foreground">{col.label}</span>
+                  <span className="text-[10px] text-muted ml-2">({count} items)</span>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="flex gap-2">
+          <button
+            onClick={handleDownload}
+            disabled={downloading || selected.size === 0}
+            className="flex-1 py-2.5 text-sm font-semibold bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 transition-colors flex items-center justify-center gap-2"
+          >
+            {downloading ? (
+              <>
+                <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                </svg>
+                Generating…
+              </>
+            ) : (
+              <>
+                <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                  <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3" />
+                </svg>
+                Download PDF
+              </>
+            )}
+          </button>
+          <button
+            onClick={onClose}
+            className="px-4 py-2.5 text-sm text-muted bg-zinc-100 rounded-lg hover:bg-zinc-200 transition-colors"
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
