@@ -17,7 +17,10 @@ export function minutesToTime(minutes: number): string {
 }
 
 export function formatTimeDisplay(time: string): string {
+  if (!time) return '';
+  if (time === '24:00') return '12:00 AM';
   const date = parse(time, 'HH:mm', new Date());
+  if (isNaN(date.getTime())) return time;
   return format(date, 'h:mm a');
 }
 
