@@ -898,11 +898,6 @@ export default function ContentPage() {
                     {note.description && (
                       <p className="text-[10px] text-zinc-500 mt-1 line-clamp-2">{note.description}</p>
                     )}
-                    <div className="flex items-center gap-1 mt-2">
-                      {note.tags.map((t) => (
-                        <TagBadge key={t} tag={t} color={TAG_DEFAULT_COLORS[t]} />
-                      ))}
-                    </div>
                   </div>
                 );
               })
