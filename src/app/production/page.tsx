@@ -2,6 +2,18 @@
 
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { usePathname } from 'next/navigation';
+import {
+  DndContext,
+  DragEndEvent,
+  DragOverlay,
+  closestCenter,
+  MouseSensor,
+  TouchSensor,
+  useSensor,
+  useSensors,
+} from '@dnd-kit/core';
+import { SortableContext, useSortable, rectSortingStrategy } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import { useStore } from '@/store/useStore';
 import type { ProductionItem, ProductionItemType } from '@/lib/types';
 
@@ -36,43 +48,72 @@ function uid() {
 
 /* ━━━ Master To-Do Panel ━━━ */
 function MasterTodoPanel({
-  items,
+  items: externalItems,
   onChange,
 }: {
   items: TodoItem[];
   onChange: (items: TodoItem[]) => void;
 }) {
+  const [localItems, setLocalItems] = useState<TodoItem[]>(externalItems);
   const [focusId, setFocusId] = useState<string | null>(null);
   const [editingAssignee, setEditingAssignee] = useState<string | null>(null);
   const [assigneeInput, setAssigneeInput] = useState('');
   const { contacts } = useStore();
   const listRef = useRef<HTMLDivElement>(null);
+  const skipNextSync = useRef(false);
 
-  const doneCount = items.filter((i) => i.done).length;
+  useEffect(() => {
+    if (skipNextSync.current) { skipNextSync.current = false; return; }
+    setLocalItems(externalItems);
+  }, [externalItems]);
+
+  const persist = useCallback((next: TodoItem[]) => {
+    setLocalItems(next);
+    skipNextSync.current = true;
+    onChange(next);
+  }, [onChange]);
+
+  const doneCount = localItems.filter((i) => i.done).length;
 
   const addItem = () => {
     const id = uid();
-    onChange([...items, { id, text: '', done: false }]);
+    const next = [...localItems, { id, text: '', done: false }];
+    persist(next);
     setFocusId(id);
     requestAnimationFrame(() => {
       listRef.current?.scrollTo({ top: listRef.current.scrollHeight, behavior: 'smooth' });
     });
   };
 
-  const toggle = (id: string) => onChange(items.map((i) => i.id === id ? { ...i, done: !i.done } : i));
-  const remove = (id: string) => { if (id === focusId) setFocusId(null); onChange(items.filter((i) => i.id !== id)); };
-  const updateText = (id: string, text: string) => onChange(items.map((i) => i.id === id ? { ...i, text } : i));
+  const toggle = (id: string) => persist(localItems.map((i) => i.id === id ? { ...i, done: !i.done } : i));
+  const remove = (id: string) => { setFocusId(null); persist(localItems.filter((i) => i.id !== id)); };
+  const updateText = (id: string, text: string) => {
+    const next = localItems.map((i) => i.id === id ? { ...i, text } : i);
+    setLocalItems(next);
+    onChange(next);
+  };
   const setAssignee = (id: string, assignee: string | undefined) => {
-    onChange(items.map((i) => i.id === id ? { ...i, assignee } : i));
+    persist(localItems.map((i) => i.id === id ? { ...i, assignee } : i));
     setEditingAssignee(null);
     setAssigneeInput('');
   };
 
-  const handleBlur = (item: TodoItem) => {
-    setTimeout(() => {
-      if (!item.text.trim()) remove(item.id);
-      setFocusId(null);
-    }, 150);
+  const handleBlur = (id: string) => {
+    const item = localItems.find((i) => i.id === id);
+    if (item && !item.text.trim()) {
+      setTimeout(() => {
+        setLocalItems((cur) => {
+          const found = cur.find((i) => i.id === id);
+          if (found && !found.text.trim()) {
+            const next = cur.filter((i) => i.id !== id);
+            onChange(next);
+            return next;
+          }
+          return cur;
+        });
+      }, 300);
+    }
+    setFocusId(null);
   };
 
   return (
@@ -80,8 +121,8 @@ function MasterTodoPanel({
       <div className="px-4 pt-4 pb-3">
         <div className="flex items-center justify-between">
           <h3 className="text-sm font-semibold text-zinc-700 tracking-tight">To-Do</h3>
-          {items.length > 0 && (
-            <span className="text-[11px] text-zinc-400 font-medium tabular-nums">{doneCount}/{items.length}</span>
+          {localItems.length > 0 && (
+            <span className="text-[11px] text-zinc-400 font-medium tabular-nums">{doneCount}/{localItems.length}</span>
           )}
         </div>
       </div>
@@ -95,7 +136,7 @@ function MasterTodoPanel({
         </button>
 
         <div className="space-y-px">
-          {items.map((item) => (
+          {localItems.map((item) => (
             <div key={item.id} className="group flex items-start gap-2.5 py-2 px-1 border-b border-zinc-200/60 last:border-b-0">
               <button
                 onClick={() => toggle(item.id)}
@@ -108,7 +149,7 @@ function MasterTodoPanel({
                   autoFocus={focusId === item.id}
                   value={item.text}
                   onChange={(e) => updateText(item.id, e.target.value)}
-                  onBlur={() => handleBlur(item)}
+                  onBlur={() => handleBlur(item.id)}
                   onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addItem(); } }}
                   placeholder="New task..."
                   className={`w-full text-[13px] bg-transparent outline-none placeholder:text-zinc-300 ${item.done ? 'line-through text-zinc-400' : 'text-zinc-700'}`}
@@ -408,6 +449,13 @@ function ItemCard({
 }) {
   const [showMenu, setShowMenu] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: item.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.4 : 1,
+  };
 
   useEffect(() => {
     if (!showMenu) return;
@@ -429,8 +477,12 @@ function ItemCard({
 
   return (
     <div
+      ref={setNodeRef}
+      style={style}
+      {...attributes}
+      {...listeners}
       onClick={onOpen}
-      className="group bg-white rounded-xl border border-zinc-200 hover:border-zinc-300 hover:shadow-md transition-all cursor-pointer relative overflow-hidden h-[180px] flex flex-col"
+      className="group bg-white rounded-xl border border-zinc-200 hover:border-zinc-300 hover:shadow-md transition-shadow cursor-grab active:cursor-grabbing relative overflow-hidden h-[180px] flex flex-col"
     >
       <div className="h-1 w-full flex-shrink-0" style={{ backgroundColor: item.color }} />
       <div className="p-4 flex-1 flex flex-col">
@@ -498,8 +550,18 @@ export default function ProductionPage() {
   const handleTodoChange = useCallback((items: TodoItem[]) => {
     if (masterTodo) {
       updateProductionItem(masterTodo.id, { content: { items } });
+    } else {
+      addProductionItem({
+        parentId: null,
+        title: '__master_todo__',
+        itemType: 'checklist',
+        icon: '✅',
+        color: '#10b981',
+        content: { items },
+        sortOrder: -1,
+      }, MASTER_TODO_ID);
     }
-  }, [masterTodo, updateProductionItem]);
+  }, [masterTodo, updateProductionItem, addProductionItem]);
 
   const navRef = useRef<HTMLDivElement>(null);
   const newMenuRef = useRef<HTMLDivElement>(null);
@@ -524,6 +586,28 @@ export default function ProductionPage() {
 
   const openItem = openItemId ? productionItems.find((i) => i.id === openItemId) ?? null : null;
   const breadcrumb = useMemo(() => buildPath(productionItems, currentFolderId), [productionItems, currentFolderId]);
+
+  const dndSensors = useSensors(
+    useSensor(MouseSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 5 } }),
+  );
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const activeItem = activeId ? currentItems.find((i) => i.id === activeId) ?? null : null;
+
+  const handleGridDragEnd = useCallback((event: DragEndEvent) => {
+    setActiveId(null);
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const oldIndex = currentItems.findIndex((i) => i.id === active.id);
+    const newIndex = currentItems.findIndex((i) => i.id === over.id);
+    if (oldIndex === -1 || newIndex === -1) return;
+    const reordered = [...currentItems];
+    const [moved] = reordered.splice(oldIndex, 1);
+    reordered.splice(newIndex, 0, moved);
+    reordered.forEach((item, i) => {
+      updateProductionItem(item.id, { sortOrder: i });
+    });
+  }, [currentItems, updateProductionItem]);
 
   const createItem = useCallback((type: ProductionItemType) => {
     const meta = TYPE_META[type];
@@ -664,6 +748,8 @@ export default function ProductionPage() {
             )}
             {/* Grid */}
             <div className="flex-1 overflow-auto p-4 md:p-8">
+              <DndContext sensors={dndSensors} collisionDetection={closestCenter} onDragStart={(e) => setActiveId(e.active.id as string)} onDragEnd={handleGridDragEnd} onDragCancel={() => setActiveId(null)}>
+              <SortableContext items={currentItems.map((i) => i.id)} strategy={rectSortingStrategy}>
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
                 {currentItems.map((item) => (
                   renamingId === item.id ? (
@@ -716,6 +802,20 @@ export default function ProductionPage() {
                   )}
                 </div>
               </div>
+              </SortableContext>
+              <DragOverlay>
+                {activeItem && (
+                  <div className="bg-white rounded-xl border-2 border-blue-400 shadow-2xl overflow-hidden h-[180px] flex flex-col opacity-90 rotate-2">
+                    <div className="h-1 w-full flex-shrink-0" style={{ backgroundColor: activeItem.color }} />
+                    <div className="p-4 flex-1 flex flex-col">
+                      <span className="text-2xl">{activeItem.icon}</span>
+                      <h3 className="text-sm font-semibold text-zinc-800 mt-3 truncate">{activeItem.title}</h3>
+                      <p className="text-[11px] text-zinc-400 mt-1">{TYPE_META[activeItem.itemType].label}</p>
+                    </div>
+                  </div>
+                )}
+              </DragOverlay>
+              </DndContext>
             </div>
           </>
         )}
