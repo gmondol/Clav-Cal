@@ -6,6 +6,7 @@ import {
   ScratchNote,
   CalendarEvent,
   CalendarView,
+  Contact,
   SHOW_TYPE_TEMPLATES,
 } from '@/lib/types';
 import { generateId, generateWeeklySummary } from '@/lib/utils';
@@ -25,6 +26,7 @@ interface StoreState {
   selectedDate: string;
   notes: ScratchNote[];
   events: CalendarEvent[];
+  contacts: Contact[];
   usedNoteIds: string[];
   customTags: CustomTag[];
   hasSeenOnboarding: boolean;
@@ -51,6 +53,10 @@ interface StoreState {
   deleteEvent: (id: string) => void;
   moveEvent: (id: string, newDate: string) => void;
   reorderEventsInDay: (activeId: string, overId: string) => void;
+
+  addContact: (contact: Omit<Contact, 'id' | 'createdAt'>) => string;
+  updateContact: (id: string, updates: Partial<Contact>) => void;
+  deleteContact: (id: string) => void;
 
   scheduleNoteAsEvent: (noteId: string, date: string, startTime?: string) => string;
   exportWeeklySummary: () => string;
@@ -154,12 +160,53 @@ function rowToEvent(row: Record<string, unknown>): CalendarEvent {
   };
 }
 
+function contactToRow(c: Contact) {
+  return {
+    id: c.id,
+    name: c.name,
+    email: c.email ?? null,
+    phone: c.phone ?? null,
+    role: c.role ?? null,
+    company: c.company ?? null,
+    profile_pic_url: c.profilePicUrl ?? null,
+    twitch_url: c.twitchUrl ?? null,
+    kick_url: c.kickUrl ?? null,
+    ig_url: c.igUrl ?? null,
+    twitter_url: c.twitterUrl ?? null,
+    tiktok_url: c.tiktokUrl ?? null,
+    youtube_url: c.youtubeUrl ?? null,
+    notes: c.notes ?? null,
+    created_at: c.createdAt,
+  };
+}
+
+function rowToContact(row: Record<string, unknown>): Contact {
+  return {
+    id: row.id as string,
+    name: row.name as string,
+    email: (row.email as string) ?? undefined,
+    phone: (row.phone as string) ?? undefined,
+    role: (row.role as string) ?? undefined,
+    company: (row.company as string) ?? undefined,
+    profilePicUrl: (row.profile_pic_url as string) ?? undefined,
+    twitchUrl: (row.twitch_url as string) ?? undefined,
+    kickUrl: (row.kick_url as string) ?? undefined,
+    igUrl: (row.ig_url as string) ?? undefined,
+    twitterUrl: (row.twitter_url as string) ?? undefined,
+    tiktokUrl: (row.tiktok_url as string) ?? undefined,
+    youtubeUrl: (row.youtube_url as string) ?? undefined,
+    notes: (row.notes as string) ?? undefined,
+    createdAt: row.created_at as string,
+  };
+}
+
 export const useStore = create<StoreState>()(
   (set, get) => ({
     currentView: 'month',
     selectedDate: format(new Date(), 'yyyy-MM-dd'),
     notes: [],
     events: [],
+    contacts: [],
     usedNoteIds: [],
     customTags: (() => { try { return JSON.parse(localStorage.getItem('clav-custom-tags') || '[]'); } catch { return []; } })(),
     hasSeenOnboarding: true,
@@ -181,13 +228,15 @@ export const useStore = create<StoreState>()(
     },
 
     loadFromSupabase: async () => {
-      const [notesRes, eventsRes] = await Promise.all([
+      const [notesRes, eventsRes, contactsRes] = await Promise.all([
         supabase.from('notes').select('*').order('sort_order', { ascending: true }),
         supabase.from('events').select('*'),
+        supabase.from('contacts').select('*').order('created_at', { ascending: false }),
       ]);
       const notes = (notesRes.data ?? []).map(rowToNote);
       const events = (eventsRes.data ?? []).map(rowToEvent);
-      set({ notes, events, loaded: true });
+      const contacts = (contactsRes.data ?? []).map(rowToContact);
+      set({ notes, events, contacts, loaded: true });
     },
 
     addNote: (note) => {
@@ -333,6 +382,42 @@ export const useStore = create<StoreState>()(
         supabase.from('events').update({ start_time: swapTime.startTime, end_time: swapTime.endTime }).eq('id', overId).then((r) => sbLog('swap event', r));
         return { events: newEvents };
       }),
+
+    addContact: (contact) => {
+      const id = generateId();
+      const full: Contact = { ...contact, id, createdAt: new Date().toISOString() };
+      set((s) => ({ contacts: [full, ...s.contacts] }));
+      supabase.from('contacts').insert(contactToRow(full)).then((r) => sbLog('insert contact', r));
+      return id;
+    },
+
+    updateContact: (id, updates) => {
+      set((s) => ({
+        contacts: s.contacts.map((c) => (c.id === id ? { ...c, ...updates } : c)),
+      }));
+      const row: Record<string, unknown> = {};
+      if (updates.name !== undefined) row.name = updates.name;
+      if (updates.email !== undefined) row.email = updates.email || null;
+      if (updates.phone !== undefined) row.phone = updates.phone || null;
+      if (updates.role !== undefined) row.role = updates.role || null;
+      if (updates.company !== undefined) row.company = updates.company || null;
+      if (updates.profilePicUrl !== undefined) row.profile_pic_url = updates.profilePicUrl || null;
+      if (updates.twitchUrl !== undefined) row.twitch_url = updates.twitchUrl || null;
+      if (updates.kickUrl !== undefined) row.kick_url = updates.kickUrl || null;
+      if (updates.igUrl !== undefined) row.ig_url = updates.igUrl || null;
+      if (updates.twitterUrl !== undefined) row.twitter_url = updates.twitterUrl || null;
+      if (updates.tiktokUrl !== undefined) row.tiktok_url = updates.tiktokUrl || null;
+      if (updates.youtubeUrl !== undefined) row.youtube_url = updates.youtubeUrl || null;
+      if (updates.notes !== undefined) row.notes = updates.notes || null;
+      if (Object.keys(row).length > 0) {
+        supabase.from('contacts').update(row).eq('id', id).then((r) => sbLog('update contact', r));
+      }
+    },
+
+    deleteContact: (id) => {
+      set((s) => ({ contacts: s.contacts.filter((c) => c.id !== id) }));
+      supabase.from('contacts').delete().eq('id', id).then((r) => sbLog('delete contact', r));
+    },
 
     scheduleNoteAsEvent: (noteId, date, startTime = '10:00') => {
       const note = get().notes.find((n) => n.id === noteId);

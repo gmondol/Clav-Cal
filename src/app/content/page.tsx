@@ -19,7 +19,7 @@ const NAV_ITEMS = [
   { href: '/', accent: 'Clav', rest: 'StreamSchedule' },
   { href: '/content', accent: 'Content', rest: 'Workshop' },
 ] as const;
-import { ScratchNote, NoteStatus, NOTE_STATUSES, PRESET_TAGS, TAG_DEFAULT_COLORS, CollabProfile } from '@/lib/types';
+import { ScratchNote, NoteStatus, NOTE_STATUSES, PRESET_TAGS, TAG_DEFAULT_COLORS, CollabProfile, Contact } from '@/lib/types';
 import { generateContentPDF, ContentColumnType } from '@/lib/pdfExport';
 import TagBadge from '@/components/ui/TagBadge';
 import ColorPicker from '@/components/ui/ColorPicker';
@@ -937,7 +937,7 @@ function CollabEditor({
 }
 
 export default function ContentPage() {
-  const { notes, events, addNote, updateNote, deleteNote, loadFromSupabase, loaded } = useStore();
+  const { notes, events, contacts, addNote, updateNote, deleteNote, addContact, updateContact, deleteContact, loadFromSupabase, loaded } = useStore();
   const [editingNote, setEditingNote] = useState<ScratchNote | null>(null);
   const [showNewForm, setShowNewForm] = useState(false);
   const [newFormStatus, setNewFormStatus] = useState<NoteStatus>('idea');
@@ -948,6 +948,7 @@ export default function ContentPage() {
   const [chatLoading, setChatLoading] = useState(false);
   const [navOpen, setNavOpen] = useState(false);
   const [showContentExport, setShowContentExport] = useState(false);
+  const [showContacts, setShowContacts] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const navRef = useRef<HTMLDivElement>(null);
   const pathname = usePathname();
@@ -1124,15 +1125,26 @@ export default function ContentPage() {
           })()}
         </div>
 
-        <button
-          onClick={() => setShowContentExport(true)}
-          className="absolute right-6 p-2 rounded-lg hover:bg-zinc-100 text-zinc-500 hover:text-blue-500 transition-colors"
-          title="Download Content PDF"
-        >
-          <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-            <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3" />
-          </svg>
-        </button>
+        <div className="absolute right-6 flex items-center gap-1">
+          <button
+            onClick={() => setShowContacts(true)}
+            className="p-2 rounded-lg hover:bg-zinc-100 text-zinc-500 hover:text-blue-500 transition-colors"
+            title="Contacts"
+          >
+            <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+              <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4-4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75" />
+            </svg>
+          </button>
+          <button
+            onClick={() => setShowContentExport(true)}
+            className="p-2 rounded-lg hover:bg-zinc-100 text-zinc-500 hover:text-blue-500 transition-colors"
+            title="Download Content PDF"
+          >
+            <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+              <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3" />
+            </svg>
+          </button>
+        </div>
       </header>
 
       <div className="flex-1 overflow-hidden flex gap-4 p-4 bg-white">
@@ -1289,6 +1301,16 @@ export default function ContentPage() {
       {showContentExport && (
         <ContentExportModal notes={notes} onClose={() => setShowContentExport(false)} />
       )}
+
+      {showContacts && (
+        <ContactsModal
+          contacts={contacts}
+          onAdd={addContact}
+          onUpdate={updateContact}
+          onDelete={deleteContact}
+          onClose={() => setShowContacts(false)}
+        />
+      )}
     </div>
     </DndContext>
   );
@@ -1402,6 +1424,341 @@ function ContentExportModal({ notes, onClose }: { notes: ScratchNote[]; onClose:
           </button>
         </div>
       </div>
+    </div>
+  );
+}
+
+function ContactsModal({
+  contacts,
+  onAdd,
+  onUpdate,
+  onDelete,
+  onClose,
+}: {
+  contacts: Contact[];
+  onAdd: (c: Omit<Contact, 'id' | 'createdAt'>) => string;
+  onUpdate: (id: string, updates: Partial<Contact>) => void;
+  onDelete: (id: string) => void;
+  onClose: () => void;
+}) {
+  const [search, setSearch] = useState('');
+  const [editing, setEditing] = useState<Contact | null>(null);
+  const [isNew, setIsNew] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+
+  const filtered = contacts.filter((c) => {
+    if (!search.trim()) return true;
+    const q = search.toLowerCase();
+    return (
+      c.name.toLowerCase().includes(q) ||
+      c.role?.toLowerCase().includes(q) ||
+      c.company?.toLowerCase().includes(q) ||
+      c.email?.toLowerCase().includes(q)
+    );
+  });
+
+  const startNew = () => {
+    setEditing({
+      id: '', name: '', createdAt: '',
+    });
+    setIsNew(true);
+  };
+
+  const handleSave = (data: Omit<Contact, 'id' | 'createdAt'>) => {
+    if (isNew) {
+      onAdd(data);
+    } else if (editing) {
+      onUpdate(editing.id, data);
+    }
+    setEditing(null);
+    setIsNew(false);
+  };
+
+  if (editing) {
+    return (
+      <ContactEditor
+        contact={isNew ? undefined : editing}
+        onSave={handleSave}
+        onCancel={() => { setEditing(null); setIsNew(false); }}
+      />
+    );
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm animate-fade-in" onClick={onClose}>
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[85vh] flex flex-col animate-scale-in" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between px-5 pt-5 pb-3">
+          <div className="flex items-center gap-2">
+            <svg width="20" height="20" fill="none" stroke="#3b82f6" strokeWidth="2" viewBox="0 0 24 24">
+              <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4-4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75" />
+            </svg>
+            <h3 className="text-base font-bold text-foreground">Contacts</h3>
+            <span className="text-[10px] text-muted bg-zinc-100 px-1.5 py-0.5 rounded-full font-medium">{contacts.length}</span>
+          </div>
+          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-zinc-100 text-muted hover:text-foreground transition-colors">
+            <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+              <path d="M18 6L6 18M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        <div className="px-5 pb-3 flex gap-2">
+          <div className="flex-1 relative">
+            <svg width="14" height="14" fill="none" stroke="#a1a1aa" strokeWidth="2" viewBox="0 0 24 24" className="absolute left-2.5 top-1/2 -translate-y-1/2">
+              <circle cx="11" cy="11" r="8" /><path d="M21 21l-4.35-4.35" />
+            </svg>
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search contacts..."
+              className="w-full text-xs bg-zinc-50 border border-zinc-200 rounded-lg pl-8 pr-3 py-2 outline-none focus:border-blue-400 transition-colors placeholder:text-zinc-400"
+            />
+          </div>
+          <button
+            onClick={startNew}
+            className="px-3 py-2 text-xs font-semibold bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors flex items-center gap-1"
+          >
+            <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+              <path d="M12 5v14M5 12h14" />
+            </svg>
+            Add
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto px-5 pb-5 space-y-2">
+          {filtered.length === 0 ? (
+            <div className="text-center py-12">
+              <span className="text-3xl">👥</span>
+              <p className="text-xs text-zinc-400 mt-2">{contacts.length === 0 ? 'No contacts yet' : 'No matching contacts'}</p>
+            </div>
+          ) : (
+            filtered.map((c) => (
+              <div
+                key={c.id}
+                className="flex items-center gap-3 p-3 rounded-xl border border-zinc-200 hover:border-blue-300 hover:bg-blue-50/30 transition-all cursor-pointer group"
+                onClick={() => { setEditing(c); setIsNew(false); }}
+              >
+                <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0 overflow-hidden">
+                  {c.profilePicUrl ? (
+                    <img src={c.profilePicUrl} alt="" className="w-full h-full object-cover" />
+                  ) : (
+                    <span className="text-sm font-bold text-blue-500">{c.name?.[0]?.toUpperCase() || '?'}</span>
+                  )}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-foreground truncate">{c.name}</p>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    {c.role && <span className="text-[10px] text-zinc-500">{c.role}</span>}
+                    {c.role && c.company && <span className="text-[10px] text-zinc-300">·</span>}
+                    {c.company && <span className="text-[10px] text-zinc-500">{c.company}</span>}
+                  </div>
+                  <div className="flex items-center gap-1.5 mt-1">
+                    {c.email && <span className="text-[9px] px-1.5 py-0.5 rounded bg-zinc-100 text-zinc-500">📧</span>}
+                    {c.phone && <span className="text-[9px] px-1.5 py-0.5 rounded bg-zinc-100 text-zinc-500">📱</span>}
+                    {c.igUrl && <span className="text-[9px] px-1.5 py-0.5 rounded bg-pink-50 text-pink-500">IG</span>}
+                    {c.twitchUrl && <span className="text-[9px] px-1.5 py-0.5 rounded bg-purple-50 text-purple-500">Twitch</span>}
+                    {c.kickUrl && <span className="text-[9px] px-1.5 py-0.5 rounded bg-green-50 text-green-500">Kick</span>}
+                    {c.twitterUrl && <span className="text-[9px] px-1.5 py-0.5 rounded bg-zinc-100 text-zinc-600">X</span>}
+                    {c.tiktokUrl && <span className="text-[9px] px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-100">TT</span>}
+                    {c.youtubeUrl && <span className="text-[9px] px-1.5 py-0.5 rounded bg-red-50 text-red-500">YT</span>}
+                  </div>
+                </div>
+                <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
+                  <button
+                    onClick={() => { setEditing(c); setIsNew(false); }}
+                    className="p-1.5 rounded-lg hover:bg-zinc-200 text-zinc-400 hover:text-foreground transition-colors"
+                    title="Edit"
+                  >
+                    <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                      <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" />
+                    </svg>
+                  </button>
+                  <button
+                    onClick={() => setDeleteConfirm(c.id)}
+                    className="p-1.5 rounded-lg hover:bg-red-100 text-zinc-400 hover:text-red-500 transition-colors"
+                    title="Delete"
+                  >
+                    <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                      <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" />
+                    </svg>
+                  </button>
+                </div>
+
+                {deleteConfirm === c.id && (
+                  <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/30 backdrop-blur-sm" onClick={(e) => { e.stopPropagation(); setDeleteConfirm(null); }}>
+                    <div className="bg-white rounded-xl shadow-2xl p-5 max-w-xs w-full animate-scale-in" onClick={(e) => e.stopPropagation()}>
+                      <h4 className="text-sm font-bold text-foreground mb-1">Delete contact?</h4>
+                      <p className="text-[11px] text-muted mb-4">"{c.name}" will be permanently deleted.</p>
+                      <div className="flex gap-2">
+                        <button onClick={() => { onDelete(c.id); setDeleteConfirm(null); }} className="flex-1 py-2 text-xs font-semibold bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors">Delete</button>
+                        <button onClick={() => setDeleteConfirm(null)} className="flex-1 py-2 text-xs font-semibold text-muted bg-zinc-100 rounded-lg hover:bg-zinc-200 transition-colors">Cancel</button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ContactEditor({
+  contact,
+  onSave,
+  onCancel,
+}: {
+  contact?: Contact;
+  onSave: (data: Omit<Contact, 'id' | 'createdAt'>) => void;
+  onCancel: () => void;
+}) {
+  const [name, setName] = useState(contact?.name ?? '');
+  const [email, setEmail] = useState(contact?.email ?? '');
+  const [phone, setPhone] = useState(contact?.phone ?? '');
+  const [role, setRole] = useState(contact?.role ?? '');
+  const [company, setCompany] = useState(contact?.company ?? '');
+  const [profilePicUrl, setProfilePicUrl] = useState(contact?.profilePicUrl ?? '');
+  const [twitchUrl, setTwitchUrl] = useState(contact?.twitchUrl ?? '');
+  const [kickUrl, setKickUrl] = useState(contact?.kickUrl ?? '');
+  const [igUrl, setIgUrl] = useState(contact?.igUrl ?? '');
+  const [twitterUrl, setTwitterUrl] = useState(contact?.twitterUrl ?? '');
+  const [tiktokUrl, setTiktokUrl] = useState(contact?.tiktokUrl ?? '');
+  const [youtubeUrl, setYoutubeUrl] = useState(contact?.youtubeUrl ?? '');
+  const [notes, setNotes] = useState(contact?.notes ?? '');
+  const [showSocials, setShowSocials] = useState(
+    !!(contact?.twitchUrl || contact?.kickUrl || contact?.igUrl || contact?.twitterUrl || contact?.tiktokUrl || contact?.youtubeUrl)
+  );
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name.trim()) return;
+    onSave({
+      name: name.trim(),
+      email: email.trim() || undefined,
+      phone: phone.trim() || undefined,
+      role: role.trim() || undefined,
+      company: company.trim() || undefined,
+      profilePicUrl: profilePicUrl.trim() || undefined,
+      twitchUrl: twitchUrl.trim() || undefined,
+      kickUrl: kickUrl.trim() || undefined,
+      igUrl: igUrl.trim() || undefined,
+      twitterUrl: twitterUrl.trim() || undefined,
+      tiktokUrl: tiktokUrl.trim() || undefined,
+      youtubeUrl: youtubeUrl.trim() || undefined,
+      notes: notes.trim() || undefined,
+    });
+  };
+
+  const inputClass = "w-full text-xs bg-white border border-zinc-300 rounded-lg px-3 py-2 outline-none focus:border-blue-400 transition-colors placeholder:text-zinc-400";
+  const labelClass = "text-[10px] font-semibold text-zinc-500 uppercase tracking-wide mb-1";
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm animate-fade-in" onClick={onCancel}>
+      <form
+        onSubmit={handleSubmit}
+        className="bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[85vh] flex flex-col animate-scale-in"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between px-5 pt-5 pb-3">
+          <h3 className="text-base font-bold text-foreground">{contact ? 'Edit Contact' : 'New Contact'}</h3>
+          <button type="button" onClick={onCancel} className="p-1.5 rounded-lg hover:bg-zinc-100 text-muted hover:text-foreground transition-colors">
+            <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+              <path d="M18 6L6 18M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto px-5 pb-5 space-y-3">
+          <div className="flex items-center gap-4 pb-2">
+            <div className="w-16 h-16 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0 overflow-hidden border-2 border-blue-200">
+              {profilePicUrl ? (
+                <img src={profilePicUrl} alt="" className="w-full h-full object-cover" />
+              ) : (
+                <span className="text-xl font-bold text-blue-400">{name?.[0]?.toUpperCase() || '?'}</span>
+              )}
+            </div>
+            <div className="flex-1 space-y-1.5">
+              <input autoFocus value={name} onChange={(e) => setName(e.target.value)} placeholder="Full name *" className={inputClass} />
+              <input value={role} onChange={(e) => setRole(e.target.value)} placeholder="Role (e.g. Manager, Creator)" className={inputClass} />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <p className={labelClass}>Email</p>
+              <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="email@example.com" className={inputClass} />
+            </div>
+            <div>
+              <p className={labelClass}>Phone</p>
+              <input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="(555) 123-4567" className={inputClass} />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <p className={labelClass}>Company</p>
+              <input value={company} onChange={(e) => setCompany(e.target.value)} placeholder="Company / Agency" className={inputClass} />
+            </div>
+            <div>
+              <p className={labelClass}>Profile Pic URL</p>
+              <input value={profilePicUrl} onChange={(e) => setProfilePicUrl(e.target.value)} placeholder="https://..." className={inputClass} />
+            </div>
+          </div>
+
+          <div>
+            <button
+              type="button"
+              onClick={() => setShowSocials(!showSocials)}
+              className="text-[11px] font-medium text-blue-500 hover:text-blue-600 transition-colors flex items-center gap-1"
+            >
+              <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" className={`transition-transform ${showSocials ? 'rotate-90' : ''}`}>
+                <path d="M9 5l7 7-7 7" />
+              </svg>
+              Social Links
+            </button>
+            {showSocials && (
+              <div className="grid grid-cols-2 gap-2 mt-2 animate-fade-in">
+                <input value={igUrl} onChange={(e) => setIgUrl(e.target.value)} placeholder="Instagram URL" className={inputClass} />
+                <input value={twitterUrl} onChange={(e) => setTwitterUrl(e.target.value)} placeholder="X / Twitter URL" className={inputClass} />
+                <input value={tiktokUrl} onChange={(e) => setTiktokUrl(e.target.value)} placeholder="TikTok URL" className={inputClass} />
+                <input value={youtubeUrl} onChange={(e) => setYoutubeUrl(e.target.value)} placeholder="YouTube URL" className={inputClass} />
+                <input value={twitchUrl} onChange={(e) => setTwitchUrl(e.target.value)} placeholder="Twitch URL" className={inputClass} />
+                <input value={kickUrl} onChange={(e) => setKickUrl(e.target.value)} placeholder="Kick URL" className={inputClass} />
+              </div>
+            )}
+          </div>
+
+          <div>
+            <p className={labelClass}>Notes</p>
+            <textarea
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="Any notes about this contact..."
+              rows={3}
+              className={`${inputClass} resize-none`}
+            />
+          </div>
+        </div>
+
+        <div className="flex gap-2 px-5 pb-5 pt-2 border-t border-zinc-100">
+          <button
+            type="submit"
+            disabled={!name.trim()}
+            className="flex-1 py-2.5 text-sm font-semibold bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-40 transition-colors"
+          >
+            {contact ? 'Save Changes' : 'Add Contact'}
+          </button>
+          <button
+            type="button"
+            onClick={onCancel}
+            className="px-4 py-2.5 text-sm text-muted bg-zinc-100 rounded-lg hover:bg-zinc-200 transition-colors"
+          >
+            Cancel
+          </button>
+        </div>
+      </form>
     </div>
   );
 }

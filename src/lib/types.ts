@@ -70,6 +70,24 @@ export interface CalendarEvent {
 }
 
 
+export interface Contact {
+  id: string;
+  name: string;
+  email?: string;
+  phone?: string;
+  role?: string;
+  company?: string;
+  profilePicUrl?: string;
+  twitchUrl?: string;
+  kickUrl?: string;
+  igUrl?: string;
+  twitterUrl?: string;
+  tiktokUrl?: string;
+  youtubeUrl?: string;
+  notes?: string;
+  createdAt: string;
+}
+
 export const COLOR_PALETTE = [
   { name: 'Rose', value: '#f43f5e', bg: '#fff1f2', border: '#fecdd3' },
   { name: 'Orange', value: '#f97316', bg: '#fff7ed', border: '#fed7aa' },
