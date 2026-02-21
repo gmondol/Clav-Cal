@@ -60,7 +60,7 @@ function ContentColumn({
       </div>
       <div
         ref={setNodeRef}
-        className={`flex-1 overflow-y-auto space-y-2.5 bg-white border border-border-light rounded-xl p-3 transition-colors ${isOver ? 'ring-2 ring-blue-300 ring-offset-1 bg-blue-50/30' : ''}`}
+        className={`flex-1 overflow-y-auto space-y-2.5 bg-white border border-border-light rounded-xl p-4 transition-colors ${isOver ? 'ring-2 ring-blue-300 ring-offset-1 bg-blue-50/30' : ''}`}
       >
         {status !== 'ready' && (
           <button
@@ -963,11 +963,11 @@ export default function ContentPage() {
 
         <div className="flex-1 flex flex-col min-w-0">
           <div className="flex-1 flex flex-col rounded-2xl overflow-hidden bg-white border-2 border-blue-400">
-            <div className="flex items-center gap-2 px-3 py-2 border-b border-border-light flex-shrink-0">
+            <div className="flex items-center gap-2 px-3 py-2 border-b border-blue-400 flex-shrink-0 bg-blue-500">
               <span className="text-lg">🧠</span>
               <div>
-                <p className="text-sm font-semibold text-foreground leading-tight">StreamBrain</p>
-                <p className="text-[10px] text-muted leading-tight">Your viral content strategist</p>
+                <p className="text-sm font-semibold text-white leading-tight">StreamBrain</p>
+                <p className="text-[10px] text-blue-100 leading-tight">Your viral content strategist</p>
               </div>
               {chatMessages.length > 0 && (
                 <button
@@ -1020,7 +1020,7 @@ export default function ContentPage() {
               )}
               <div ref={chatEndRef} />
             </div>
-            <div className="p-2 border-t border-border-light">
+            <div className="p-3 border-t border-blue-400 bg-blue-500">
               <div className="flex gap-2">
                 <input
                   value={chatInput}
