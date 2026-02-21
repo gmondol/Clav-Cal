@@ -53,7 +53,7 @@ export default function ScratchPanel({ searchRef, showFormDefault }: ScratchPane
 
   return (
     <div className="flex flex-col h-full bg-surface border-l border-border">
-      <div className="p-3 border-b border-border space-y-2 bg-[#e8e8eb] rounded-b-xl" style={{ boxShadow: '6px 6px 12px #c8c8cb, -6px -6px 12px #ffffff' }}>
+      <div className="p-3 border-b border-border space-y-2 bg-white">
         <div className="flex items-center justify-center gap-2 px-3 py-1.5">
           <h3 className="text-sm font-bold text-black uppercase tracking-wider">Approved Content</h3>
           <button
