@@ -3,9 +3,9 @@ export type CalendarView = 'month' | 'week';
 export type NoteStatus = 'idea' | 'workshop' | 'ready' | 'used';
 
 export const NOTE_STATUSES: { value: NoteStatus; label: string; emoji: string; color: string }[] = [
+  { value: 'workshop', label: 'Potential Collabs', emoji: '🤝', color: '#8b5cf6' },
   { value: 'idea', label: 'Idea', emoji: '💡', color: '#f59e0b' },
   { value: 'ready', label: 'Approved', emoji: '✅', color: '#10b981' },
-  { value: 'workshop', label: 'Potential Collabs', emoji: '🤝', color: '#8b5cf6' },
   { value: 'used', label: 'Used', emoji: '📋', color: '#6b7280' },
 ];
 

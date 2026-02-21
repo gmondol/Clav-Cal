@@ -1083,6 +1083,45 @@ export default function ContentPage() {
           />
         ))}
 
+        {/* Used Content Column */}
+        <div className="flex-1 flex flex-col min-w-0">
+          <div className="flex items-center gap-2 mb-3 px-1">
+            <span className="text-base">📋</span>
+            <h2 className="text-sm font-bold text-foreground">Used</h2>
+            <span className="text-[10px] font-semibold text-white bg-blue-500 rounded-full px-1.5 py-0.5">
+              {getNotesForStatus('used').length}
+            </span>
+          </div>
+          <div className="flex-1 overflow-y-auto space-y-2.5 bg-zinc-50 border border-border-light rounded-xl p-4">
+            {getNotesForStatus('used').length === 0 ? (
+              <p className="text-[11px] text-zinc-400 text-center py-8">Scheduled content will appear here</p>
+            ) : (
+              getNotesForStatus('used').map((note) => {
+                const displayColor = (note.tags.length > 0 && TAG_DEFAULT_COLORS[note.tags[0]]) ? TAG_DEFAULT_COLORS[note.tags[0]] : (note.color || '#d4d4d8');
+                return (
+                  <div
+                    key={note.id}
+                    className="rounded-lg p-4 min-h-[5rem]"
+                    style={{ border: `1.5px solid ${displayColor}`, backgroundColor: displayColor + '18' }}
+                  >
+                    <h4 className="text-sm font-semibold leading-tight truncate" style={{ color: displayColor }}>
+                      {note.title}
+                    </h4>
+                    {note.description && (
+                      <p className="text-[10px] text-zinc-500 mt-1 line-clamp-2">{note.description}</p>
+                    )}
+                    <div className="flex items-center gap-1 mt-2">
+                      {note.tags.map((t) => (
+                        <TagBadge key={t} tag={t} color={TAG_DEFAULT_COLORS[t]} />
+                      ))}
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </div>
+
         <div className="flex-1 flex flex-col min-w-0">
           <div className="flex-1 flex flex-col rounded-2xl overflow-hidden bg-white border-2 border-blue-400">
             <div className="flex items-center gap-2 px-3 py-2 border-b border-blue-400 flex-shrink-0 bg-blue-500">
