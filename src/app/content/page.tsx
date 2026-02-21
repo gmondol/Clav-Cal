@@ -18,6 +18,7 @@ import { useStore } from '@/store/useStore';
 const NAV_ITEMS = [
   { href: '/', accent: 'Clav', rest: 'StreamSchedule' },
   { href: '/content', accent: 'Content', rest: 'Workshop' },
+  { href: '/production', accent: 'Production', rest: 'Hub' },
 ] as const;
 import { ScratchNote, NoteStatus, NOTE_STATUSES, PRESET_TAGS, TAG_DEFAULT_COLORS, CollabProfile, Contact } from '@/lib/types';
 import { generateContentPDF, ContentColumnType } from '@/lib/pdfExport';

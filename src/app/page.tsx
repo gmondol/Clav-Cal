@@ -183,6 +183,15 @@ export default function Home() {
         }
       }
 
+      if (activeData.type === 'event' && overData.type === 'unschedule') {
+        const evt = activeData.event;
+        if (evt.fromNoteId) {
+          updateNote(evt.fromNoteId, { status: 'ready' });
+        }
+        deleteEvent(evt.id);
+        return;
+      }
+
       if (activeData.type === 'event' && overData.type === 'day' && overData.date) {
         moveEvent(activeData.event.id, overData.date);
         return;
@@ -197,7 +206,7 @@ export default function Home() {
         return;
       }
     },
-    [notes, moveEvent, reorderNotes, reorderEventsInDay]
+    [notes, moveEvent, reorderNotes, reorderEventsInDay, deleteEvent, updateNote]
   );
 
   const handlePendingDropSave = useCallback(

@@ -7,7 +7,7 @@ import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { useStore } from '@/store/useStore';
-import { CalendarEvent, TAG_DEFAULT_COLORS, NOTE_STATUSES } from '@/lib/types';
+import { CalendarEvent, ScratchNote, TAG_DEFAULT_COLORS, NOTE_STATUSES } from '@/lib/types';
 import {
   getEventsForDate,
   getConflictingEvents,
@@ -293,7 +293,35 @@ export default function DayView({ date, onClose }: DayViewProps) {
           )}
 
           {/* Content Ideas Sidebar */}
-          <div className="hidden md:flex w-72 border-l border-border flex-col bg-zinc-50/50">
+          <UnscheduleSidebar
+            filteredNotes={filteredNotes}
+            ideaSearch={ideaSearch}
+            setIdeaSearch={setIdeaSearch}
+            setShowNewForm={setShowNewForm}
+            setEditingEvent={setEditingEvent}
+            scheduleNote={scheduleNote}
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function UnscheduleSidebar({ filteredNotes, ideaSearch, setIdeaSearch, setShowNewForm, setEditingEvent, scheduleNote }: {
+  filteredNotes: ScratchNote[];
+  ideaSearch: string;
+  setIdeaSearch: (v: string) => void;
+  setShowNewForm: (v: boolean) => void;
+  setEditingEvent: (v: CalendarEvent | null) => void;
+  scheduleNote: (note: ScratchNote) => void;
+}) {
+  const { setNodeRef, isOver } = useDroppable({
+    id: 'unschedule-drop',
+    data: { type: 'unschedule' },
+  });
+
+  return (
+          <div ref={setNodeRef} className={`hidden md:flex w-72 border-l border-border flex-col transition-colors ${isOver ? 'bg-blue-100/60' : 'bg-zinc-50/50'}`}>
             <div className="p-3 border-b border-border-light">
               <div className="flex items-center justify-between mb-2">
                 <h3 className="text-xs font-bold text-foreground uppercase tracking-wider">Approved Content</h3>
@@ -352,9 +380,11 @@ export default function DayView({ date, onClose }: DayViewProps) {
                 );
               })}
             </div>
+            {isOver && (
+              <div className="p-3 border-t border-blue-300 bg-blue-50 text-center">
+                <p className="text-[11px] font-semibold text-blue-600">Drop here to unschedule</p>
+              </div>
+            )}
           </div>
-        </div>
-      </div>
-    </div>
   );
 }

@@ -8,6 +8,7 @@ import { usePathname } from 'next/navigation';
 const NAV_ITEMS = [
   { href: '/', label: 'Clav StreamSchedule', accent: 'Clav', rest: 'StreamSchedule' },
   { href: '/content', label: 'Content Workshop', accent: 'Content', rest: 'Workshop' },
+  { href: '/production', label: 'Production Hub', accent: 'Production', rest: 'Hub' },
 ] as const;
 
 interface HeaderProps {
