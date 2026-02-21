@@ -83,6 +83,10 @@ function noteToRow(note: ScratchNote) {
     status: note.status ?? 'idea',
     address: note.address ?? null,
     contact: note.contact ?? null,
+    contact_name: note.contactName ?? null,
+    contact_phone: note.contactPhone ?? null,
+    contact_email: note.contactEmail ?? null,
+    contact_notes: note.contactNotes ?? null,
     attachments: note.attachments ?? [],
     linked_collab_ids: note.linkedCollabIds ?? [],
   };
@@ -117,6 +121,10 @@ function rowToNote(row: Record<string, unknown>): ScratchNote {
     status: (row.status as ScratchNote['status']) ?? 'idea',
     address: (row.address as string) ?? undefined,
     contact: (row.contact as string) ?? undefined,
+    contactName: (row.contact_name as string) ?? undefined,
+    contactPhone: (row.contact_phone as string) ?? undefined,
+    contactEmail: (row.contact_email as string) ?? undefined,
+    contactNotes: (row.contact_notes as string) ?? undefined,
     attachments: (row.attachments as string[]) ?? [],
     linkedCollabIds: (row.linked_collab_ids as string[]) ?? [],
   };
@@ -132,6 +140,10 @@ function eventToRow(event: CalendarEvent) {
     color: event.color,
     address: event.address ?? null,
     contact: event.contact ?? null,
+    contact_name: event.contactName ?? null,
+    contact_phone: event.contactPhone ?? null,
+    contact_email: event.contactEmail ?? null,
+    contact_notes: event.contactNotes ?? null,
     description: event.description ?? null,
     tags: event.tags,
     complexity: event.complexity ?? null,
@@ -151,6 +163,10 @@ function rowToEvent(row: Record<string, unknown>): CalendarEvent {
     color: row.color as string,
     address: (row.address as string) ?? undefined,
     contact: (row.contact as string) ?? undefined,
+    contactName: (row.contact_name as string) ?? undefined,
+    contactPhone: (row.contact_phone as string) ?? undefined,
+    contactEmail: (row.contact_email as string) ?? undefined,
+    contactNotes: (row.contact_notes as string) ?? undefined,
     description: (row.description as string) ?? undefined,
     tags: (row.tags as string[]) ?? [],
     complexity: (row.complexity as CalendarEvent['complexity']) ?? undefined,
@@ -271,6 +287,10 @@ export const useStore = create<StoreState>()(
       }
       if (updates.address !== undefined) row.address = updates.address || null;
       if (updates.contact !== undefined) row.contact = updates.contact || null;
+      if (updates.contactName !== undefined) row.contact_name = updates.contactName || null;
+      if (updates.contactPhone !== undefined) row.contact_phone = updates.contactPhone || null;
+      if (updates.contactEmail !== undefined) row.contact_email = updates.contactEmail || null;
+      if (updates.contactNotes !== undefined) row.contact_notes = updates.contactNotes || null;
       if (updates.attachments !== undefined) row.attachments = updates.attachments;
       if (updates.linkedCollabIds !== undefined) row.linked_collab_ids = updates.linkedCollabIds;
       if (Object.keys(row).length > 0) {
@@ -344,6 +364,10 @@ export const useStore = create<StoreState>()(
       if (updates.color !== undefined) row.color = updates.color;
       if (updates.address !== undefined) row.address = updates.address;
       if (updates.contact !== undefined) row.contact = updates.contact;
+      if (updates.contactName !== undefined) row.contact_name = updates.contactName;
+      if (updates.contactPhone !== undefined) row.contact_phone = updates.contactPhone;
+      if (updates.contactEmail !== undefined) row.contact_email = updates.contactEmail;
+      if (updates.contactNotes !== undefined) row.contact_notes = updates.contactNotes;
       if (updates.description !== undefined) row.description = updates.description;
       if (updates.tags !== undefined) row.tags = updates.tags;
       if (updates.complexity !== undefined) row.complexity = updates.complexity;
@@ -432,6 +456,10 @@ export const useStore = create<StoreState>()(
         color: note.color,
         address: note.address,
         contact: note.contact,
+        contactName: note.contactName,
+        contactPhone: note.contactPhone,
+        contactEmail: note.contactEmail,
+        contactNotes: note.contactNotes,
         description: note.description,
         tags: [...note.tags],
         complexity: note.complexity,

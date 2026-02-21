@@ -253,7 +253,10 @@ function NoteEditor({
   const [tags, setTags] = useState<string[]>(note?.tags ?? []);
   const [showTagPicker, setShowTagPicker] = useState(false);
   const [address, setAddress] = useState(note?.address ?? '');
-  const [contact, setContact] = useState(note?.contact ?? '');
+  const [contactName, setContactName] = useState(note?.contactName ?? '');
+  const [contactPhone, setContactPhone] = useState(note?.contactPhone ?? '');
+  const [contactEmail, setContactEmail] = useState(note?.contactEmail ?? '');
+  const [contactNotes, setContactNotes] = useState(note?.contactNotes ?? '');
   const [attachments, setAttachments] = useState<string[]>(note?.attachments ?? []);
   const [uploading, setUploading] = useState(false);
   const [linkedCollabIds, setLinkedCollabIds] = useState<string[]>(note?.linkedCollabIds ?? []);
@@ -264,7 +267,7 @@ function NoteEditor({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const status = note?.status ?? 'idea';
   const isApproved = status === 'ready';
-  const { customTags, addCustomTag } = useStore();
+  const { customTags, addCustomTag, addContact, contacts } = useStore();
 
   customTags.forEach((t) => { TAG_DEFAULT_COLORS[t.name] = t.color; });
 
@@ -334,7 +337,10 @@ function NoteEditor({
       status,
       archived: false,
       address: address.trim() || undefined,
-      contact: contact.trim() || undefined,
+      contactName: contactName.trim() || undefined,
+      contactPhone: contactPhone.trim() || undefined,
+      contactEmail: contactEmail.trim() || undefined,
+      contactNotes: contactNotes.trim() || undefined,
       attachments,
       linkedCollabIds,
     });
@@ -445,12 +451,60 @@ function NoteEditor({
               className="w-full text-xs bg-zinc-50 rounded-md border border-border-light p-2 outline-none resize-none placeholder:text-zinc-300 focus:border-primary/30"
             />
 
-            <input
-              value={contact}
-              onChange={(e) => setContact(e.target.value)}
-              placeholder="👤 Point of Contact (optional)"
-              className="w-full text-xs bg-zinc-50 rounded-md border border-border-light p-2 outline-none placeholder:text-zinc-300 focus:border-primary/30"
-            />
+            <div className="space-y-2 p-3 rounded-lg border border-zinc-200 bg-white">
+              <div className="flex items-center justify-between">
+                <p className="text-[10px] font-semibold text-zinc-500 uppercase tracking-wide">👤 Point of Contact</p>
+                {contactName.trim() && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const existing = contacts.find((c) => c.name.toLowerCase() === contactName.trim().toLowerCase());
+                      if (existing) return;
+                      addContact({
+                        name: contactName.trim(),
+                        phone: contactPhone.trim() || undefined,
+                        email: contactEmail.trim() || undefined,
+                        notes: contactNotes.trim() || undefined,
+                      });
+                    }}
+                    className="text-[10px] font-medium text-blue-500 hover:text-blue-600 transition-colors flex items-center gap-1 px-2 py-0.5 rounded-md hover:bg-blue-50"
+                    title="Save to Contacts"
+                  >
+                    <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                      <path d="M16 21v-2a4 4 0 00-4-4H5a4 4 0 00-4-4v2" /><circle cx="8.5" cy="7" r="4" /><path d="M20 8v6M23 11h-6" />
+                    </svg>
+                    Save to Contacts
+                  </button>
+                )}
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <input
+                  value={contactName}
+                  onChange={(e) => setContactName(e.target.value)}
+                  placeholder="Name"
+                  className="text-xs bg-zinc-50 border border-zinc-200 rounded-md px-2 py-1.5 outline-none placeholder:text-zinc-400 focus:border-blue-400 transition-colors"
+                />
+                <input
+                  value={contactPhone}
+                  onChange={(e) => setContactPhone(e.target.value)}
+                  placeholder="Phone"
+                  className="text-xs bg-zinc-50 border border-zinc-200 rounded-md px-2 py-1.5 outline-none placeholder:text-zinc-400 focus:border-blue-400 transition-colors"
+                />
+                <input
+                  value={contactEmail}
+                  onChange={(e) => setContactEmail(e.target.value)}
+                  placeholder="Email"
+                  className="col-span-2 text-xs bg-zinc-50 border border-zinc-200 rounded-md px-2 py-1.5 outline-none placeholder:text-zinc-400 focus:border-blue-400 transition-colors"
+                />
+              </div>
+              <textarea
+                value={contactNotes}
+                onChange={(e) => setContactNotes(e.target.value)}
+                placeholder="Contact notes..."
+                rows={2}
+                className="w-full text-xs bg-zinc-50 border border-zinc-200 rounded-md px-2 py-1.5 outline-none resize-none placeholder:text-zinc-400 focus:border-blue-400 transition-colors"
+              />
+            </div>
 
             {/* Attached Collabs */}
             {linkedCollabs.length > 0 && (

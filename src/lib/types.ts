@@ -48,6 +48,10 @@ export interface ScratchNote {
   collabProfiles?: CollabProfile[];
   address?: string;
   contact?: string;
+  contactName?: string;
+  contactPhone?: string;
+  contactEmail?: string;
+  contactNotes?: string;
   attachments?: string[];
   linkedCollabIds?: string[];
 }
@@ -61,6 +65,10 @@ export interface CalendarEvent {
   color: string;
   address?: string;
   contact?: string;
+  contactName?: string;
+  contactPhone?: string;
+  contactEmail?: string;
+  contactNotes?: string;
   description?: string;
   tags: string[];
   complexity?: Complexity;

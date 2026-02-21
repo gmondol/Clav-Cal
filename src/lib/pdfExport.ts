@@ -144,14 +144,18 @@ export async function generateSchedulePDF(
         }
         y += 16;
 
-        if (e.address || e.contact) {
+        if (e.address || e.contactName || e.contact) {
           doc.setFontSize(8);
           doc.setTextColor(100, 100, 100);
           if (e.address) {
             doc.text(`📍 ${e.address}`, margin + 6, y + 2);
             y += 4;
           }
-          if (e.contact) {
+          if (e.contactName) {
+            const parts = [e.contactName, e.contactPhone, e.contactEmail].filter(Boolean);
+            doc.text(`👤 ${parts.join(' · ')}`, margin + 6, y + 2);
+            y += 4;
+          } else if (e.contact) {
             doc.text(`👤 ${e.contact}`, margin + 6, y + 2);
             y += 4;
           }
@@ -259,7 +263,8 @@ export async function generateContentPDF(
         if (note.description) blockHeight += 5;
         if (note.tags.length > 0) blockHeight += 5;
         if (note.address) blockHeight += 4;
-        if (note.contact) blockHeight += 4;
+        if (note.contactName) blockHeight += 4;
+        if (note.contactPhone || note.contactEmail) blockHeight += 4;
 
         doc.setFillColor(lightR, lightG, lightB);
         doc.roundedRect(margin, y - 4, pageW - margin * 2, blockHeight, 1.5, 1.5, 'F');
@@ -305,12 +310,13 @@ export async function generateContentPDF(
           doc.text(`📍 ${note.address}`, margin + 5, innerY);
         }
 
-        if (note.contact) {
+        if (note.contactName) {
           innerY += 4;
           doc.setFont('helvetica', 'normal');
           doc.setFontSize(7);
           doc.setTextColor(100, 100, 100);
-          doc.text(`👤 ${note.contact}`, margin + 5, innerY);
+          const contactParts = [note.contactName, note.contactPhone, note.contactEmail].filter(Boolean);
+          doc.text(`👤 ${contactParts.join(' · ')}`, margin + 5, innerY);
         }
 
         y += blockHeight + 3;
