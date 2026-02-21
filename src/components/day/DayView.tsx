@@ -65,34 +65,16 @@ function DayEventBlock({
   return (
     <div
       ref={setNodeRef}
-      style={mergedStyle}
       {...attributes}
       {...listeners}
       onClick={(e) => { e.stopPropagation(); onEdit(); }}
-      className={`absolute left-0 right-0 cursor-grab active:cursor-grabbing transition-shadow hover:shadow-md group ${
+      className={`absolute right-0 cursor-grab active:cursor-grabbing transition-shadow hover:shadow-md group ${
         hasConflict ? 'ring-2 ring-red-300 ring-offset-1' : ''
       }`}
+      style={{ ...mergedStyle, left: '5rem' }}
     >
       <div className="h-full flex">
-        <div className="w-16 flex flex-col flex-shrink-0 border-r border-border-light">
-          {(() => {
-            const slots: string[] = [];
-            for (let m = startMin; m < endMin; m += 30) {
-              const h = Math.floor(m / 60);
-              const mm = m % 60;
-              slots.push(`${h.toString().padStart(2, '0')}:${mm.toString().padStart(2, '0')}`);
-            }
-            return slots.map((t, i) => (
-              <div
-                key={t}
-                className={`flex-1 flex items-start justify-end pr-3 pt-0.5 text-[10px] text-muted ${i > 0 ? 'border-t border-border-light' : ''}`}
-              >
-                {formatTimeDisplay(t)}
-              </div>
-            ));
-          })()}
-        </div>
-        <div className="flex-[3] p-2 flex flex-col justify-start min-w-0 border-r border-border-light">
+        <div className="flex-[3] p-2 flex flex-col justify-start min-w-0">
           <span className="text-lg font-bold truncate" style={{ color: event.color }}>
             {event.title}
           </span>
@@ -105,7 +87,7 @@ function DayEventBlock({
             </span>
           )}
         </div>
-        <div className="flex-[3] p-2 flex flex-col justify-start min-w-0 border-r border-border-light">
+        <div className="flex-[3] p-2 flex flex-col justify-start min-w-0 border-l border-border-light">
           {event.address && (
             <span className="text-xs text-foreground line-clamp-2">📍 {event.address}</span>
           )}
@@ -113,7 +95,7 @@ function DayEventBlock({
             <span className="text-xs text-muted line-clamp-2 mt-4">👤 {event.contact}</span>
           )}
         </div>
-        <div className="flex-[2] p-2 flex flex-col justify-start min-w-0">
+        <div className="flex-[2] p-2 flex flex-col justify-start min-w-0 border-l border-border-light">
           {event.description && (
             <span className="text-xs text-foreground line-clamp-4">{event.description}</span>
           )}

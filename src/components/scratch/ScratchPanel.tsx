@@ -54,8 +54,8 @@ export default function ScratchPanel({ searchRef, showFormDefault }: ScratchPane
   return (
     <div className="flex flex-col h-full bg-surface border-l border-border">
       <div className="p-3 border-b border-border space-y-2 bg-white">
-        <div className="flex items-center justify-center gap-2 px-3 py-1.5 bg-blue-500 rounded-lg">
-          <h3 className="text-sm font-bold text-white uppercase tracking-wider">Approved Content</h3>
+        <div className="flex items-center justify-center gap-2 px-3 py-1.5">
+          <h3 className="text-sm font-bold text-blue-500 uppercase tracking-wider">Approved Content</h3>
           <button
             onClick={() => { setEditingNote(null); setShowForm(true); }}
             className="px-2.5 py-1.5 text-xs font-semibold rounded-md text-blue-500 bg-white border border-dashed border-blue-400 hover:bg-blue-50 transition-colors"

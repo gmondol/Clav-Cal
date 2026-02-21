@@ -365,9 +365,19 @@ function NoteEditor({
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm animate-fade-in" onClick={onCancel}>
       <form
         onSubmit={handleSubmit}
-        className="bg-white rounded-xl border border-border p-4 space-y-3 animate-scale-in shadow-lg max-h-[80vh] overflow-y-auto max-w-lg w-full"
+        className="bg-white rounded-xl border border-border p-4 space-y-3 animate-scale-in shadow-lg max-h-[80vh] overflow-y-auto max-w-lg w-full relative"
         onClick={(e) => e.stopPropagation()}
       >
+        <button
+          type="button"
+          onClick={onCancel}
+          className="absolute top-3 right-3 p-1.5 rounded-lg hover:bg-red-50 text-muted hover:text-red-500 transition-colors z-10"
+          title="Close"
+        >
+          <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+            <path d="M18 6L6 18M6 6l12 12" />
+          </svg>
+        </button>
         <input
           autoFocus
           value={title}
@@ -377,7 +387,6 @@ function NoteEditor({
         />
 
         <div>
-          <label className="text-[10px] font-semibold text-muted uppercase tracking-wider mb-1 block">Tag</label>
           <div className="flex flex-wrap gap-1.5">
             {[...PRESET_TAGS.map((t) => ({ name: t, color: TAG_DEFAULT_COLORS[t] || '#000' })), ...customTags].map(({ name: tag, color: tagColor }) => {
               const isActive = tags.includes(tag);
@@ -448,6 +457,104 @@ function NoteEditor({
           )}
         </div>
 
+        {/* Attached Collabs */}
+        {linkedCollabs.length > 0 && (
+          <div className="space-y-1.5">
+            {linkedCollabs.map((collab) => {
+              const profiles = collab.collabProfiles ?? [];
+              const profileNames = profiles.map((p) => p.name).filter(Boolean).join(', ');
+              return (
+                <div key={collab.id} className="flex items-center gap-2 px-2.5 py-1.5 bg-red-500 rounded-lg">
+                  <div className="flex -space-x-1.5 flex-shrink-0">
+                    {profiles.slice(0, 3).map((p, i) => (
+                      <div key={i} className="w-5 h-5 rounded-full overflow-hidden bg-white/30 border border-white flex items-center justify-center">
+                        {p.profilePicUrl ? (
+                          <img src={p.profilePicUrl} alt={p.name} className="w-full h-full object-cover" />
+                        ) : (
+                          <span className="text-[8px] text-white font-bold">{p.name?.[0]?.toUpperCase()}</span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                  <span className="text-[11px] font-medium text-white truncate flex-1">{collab.title || profileNames}</span>
+                  <button
+                    type="button"
+                    onClick={() => detachCollab(collab.id)}
+                    className="text-[10px] text-white/70 hover:text-white font-medium flex-shrink-0 transition-colors flex items-center gap-0.5"
+                  >
+                    <svg width="10" height="10" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12" /></svg>
+                    Detach
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        <div className="flex gap-2">
+          {/* Attach Collab Button + Picker */}
+          <div className="relative flex-1">
+            <button
+              type="button"
+              onClick={() => setShowCollabPicker(!showCollabPicker)}
+              className="w-full text-xs rounded-md border border-dashed border-yellow-400 p-2 text-yellow-600 font-medium hover:border-yellow-500 hover:text-yellow-700 bg-yellow-50/50 hover:bg-yellow-50 transition-colors flex items-center justify-center gap-1.5"
+            >
+              🤝 Attach a Collab
+            </button>
+            {showCollabPicker && (
+              <div className="absolute left-0 right-0 top-full mt-1 bg-white border border-border rounded-lg shadow-lg z-10 max-h-48 overflow-y-auto">
+                {availableCollabs.length === 0 ? (
+                  <p className="text-[11px] text-zinc-400 p-3 text-center">No collabs available</p>
+                ) : (
+                  availableCollabs.map((collab) => {
+                    const profiles = collab.collabProfiles ?? [];
+                    const profileNames = profiles.map((p) => p.name).filter(Boolean).join(', ');
+                    return (
+                      <button
+                        key={collab.id}
+                        type="button"
+                        onClick={() => attachCollab(collab.id)}
+                        className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-purple-50 transition-colors border-b border-border-light last:border-b-0"
+                      >
+                        <div className="flex -space-x-1.5 flex-shrink-0">
+                          {profiles.slice(0, 3).map((p, i) => (
+                            <div key={i} className="w-5 h-5 rounded-full overflow-hidden bg-purple-200 border border-white flex items-center justify-center">
+                              {p.profilePicUrl ? (
+                                <img src={p.profilePicUrl} alt={p.name} className="w-full h-full object-cover" />
+                              ) : (
+                                <span className="text-[8px] text-purple-600">{p.name?.[0]?.toUpperCase()}</span>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-[11px] font-medium text-zinc-800 truncate">{collab.title || profileNames}</p>
+                          {collab.title && profileNames && (
+                            <p className="text-[10px] text-zinc-400 truncate">{profileNames}</p>
+                          )}
+                        </div>
+                      </button>
+                    );
+                  })
+                )}
+              </div>
+            )}
+          </div>
+
+          {isApproved && !showContact && (
+            <button
+              type="button"
+              onClick={() => setShowContact(true)}
+              className="flex-1 flex items-center justify-center gap-1.5 text-xs text-blue-500 hover:text-blue-600 py-2 border border-dashed border-blue-400 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors"
+            >
+              <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                <circle cx="12" cy="7" r="4" /><path d="M5.5 21v-2a6 6 0 0113 0v2" /><path d="M20 8v6M23 11h-6" />
+              </svg>
+              Add Point of Contact
+            </button>
+          )}
+        </div>
+
         <textarea
           value={description}
           onChange={(e) => setDescription(e.target.value)}
@@ -466,25 +573,14 @@ function NoteEditor({
               className="w-full text-xs bg-zinc-50 rounded-md border border-border-light p-2 outline-none resize-none placeholder:text-zinc-300 focus:border-primary/30"
             />
 
-            {!showContact ? (
-              <button
-                type="button"
-                onClick={() => setShowContact(true)}
-                className="w-full flex items-center justify-center gap-1.5 text-xs text-zinc-400 hover:text-zinc-600 py-2 border border-dashed border-zinc-300 rounded-lg hover:border-zinc-400 hover:bg-zinc-50 transition-colors"
-              >
-                <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                  <circle cx="12" cy="7" r="4" /><path d="M5.5 21v-2a6 6 0 0113 0v2" /><path d="M20 8v6M23 11h-6" />
-                </svg>
-                Add Point of Contact
-              </button>
-            ) : (
+            {showContact && (
               <div className="space-y-2 p-3 rounded-lg border border-zinc-200 bg-white">
                 <div className="flex items-center justify-between">
                   <p className="text-[10px] font-semibold text-zinc-500 uppercase tracking-wide">👤 Point of Contact</p>
                   <div className="flex items-center gap-2">
-                    {contactName.trim() && (
                       <button
                         type="button"
+                        disabled={!contactName.trim()}
                         onClick={() => {
                           const fullName = `${contactName.trim()} ${contactLastName.trim()}`.trim();
                           const existing = contacts.find((c) => c.name.toLowerCase() === fullName.toLowerCase());
@@ -499,7 +595,7 @@ function NoteEditor({
                           setShowContact(false);
                           setContactName(''); setContactLastName(''); setContactRole(''); setContactPhone(''); setContactEmail(''); setContactNotes('');
                         }}
-                        className="text-[10px] font-medium text-blue-500 hover:text-blue-600 transition-colors flex items-center gap-1 px-2 py-0.5 rounded-md hover:bg-blue-50"
+                        className="text-[10px] font-medium text-blue-500 hover:text-blue-600 disabled:text-zinc-300 disabled:cursor-not-allowed transition-colors flex items-center gap-1 px-2 py-0.5 rounded-md hover:bg-blue-50 disabled:hover:bg-transparent"
                         title="Save to Contacts"
                       >
                         <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
@@ -507,7 +603,6 @@ function NoteEditor({
                         </svg>
                         Save to Contacts
                       </button>
-                    )}
                     <button
                       type="button"
                       onClick={() => setShowContact(false)}
@@ -562,88 +657,7 @@ function NoteEditor({
               </div>
             )}
 
-            {/* Attached Collabs */}
-            {linkedCollabs.length > 0 && (
-              <div className="space-y-1.5">
-                {linkedCollabs.map((collab) => {
-                  const profiles = collab.collabProfiles ?? [];
-                  const profileNames = profiles.map((p) => p.name).filter(Boolean).join(', ');
-                  return (
-                    <div key={collab.id} className="flex items-center gap-2 px-2.5 py-1.5 bg-red-500 rounded-lg">
-                      <div className="flex -space-x-1.5 flex-shrink-0">
-                        {profiles.slice(0, 3).map((p, i) => (
-                          <div key={i} className="w-5 h-5 rounded-full overflow-hidden bg-white/30 border border-white flex items-center justify-center">
-                            {p.profilePicUrl ? (
-                              <img src={p.profilePicUrl} alt={p.name} className="w-full h-full object-cover" />
-                            ) : (
-                              <span className="text-[8px] text-white font-bold">{p.name?.[0]?.toUpperCase()}</span>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                      <span className="text-[11px] font-medium text-white truncate flex-1">{collab.title || profileNames}</span>
-                      <button
-                        type="button"
-                        onClick={() => detachCollab(collab.id)}
-                        className="text-[10px] text-white/70 hover:text-white font-medium flex-shrink-0 transition-colors flex items-center gap-0.5"
-                      >
-                        <svg width="10" height="10" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12" /></svg>
-                        Detach
-                      </button>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-
-            {/* Attach Collab Button + Picker */}
-            <div className="relative">
-              <button
-                type="button"
-                onClick={() => setShowCollabPicker(!showCollabPicker)}
-                className="w-full text-xs rounded-md border border-dashed border-red-400 p-2 text-red-500 font-medium hover:border-red-500 hover:text-red-600 hover:bg-red-50 transition-colors flex items-center justify-center gap-1.5"
-              >
-                🤝 Attach a Collab
-              </button>
-              {showCollabPicker && (
-                <div className="absolute left-0 right-0 top-full mt-1 bg-white border border-border rounded-lg shadow-lg z-10 max-h-48 overflow-y-auto">
-                  {availableCollabs.length === 0 ? (
-                    <p className="text-[11px] text-zinc-400 p-3 text-center">No collabs available</p>
-                  ) : (
-                    availableCollabs.map((collab) => {
-                      const profiles = collab.collabProfiles ?? [];
-                      const profileNames = profiles.map((p) => p.name).filter(Boolean).join(', ');
-                      return (
-                        <button
-                          key={collab.id}
-                          type="button"
-                          onClick={() => attachCollab(collab.id)}
-                          className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-purple-50 transition-colors border-b border-border-light last:border-b-0"
-                        >
-                          <div className="flex -space-x-1.5 flex-shrink-0">
-                            {profiles.slice(0, 3).map((p, i) => (
-                              <div key={i} className="w-5 h-5 rounded-full overflow-hidden bg-purple-200 border border-white flex items-center justify-center">
-                                {p.profilePicUrl ? (
-                                  <img src={p.profilePicUrl} alt={p.name} className="w-full h-full object-cover" />
-                                ) : (
-                                  <span className="text-[8px] text-purple-600">{p.name?.[0]?.toUpperCase()}</span>
-                                )}
-                              </div>
-                            ))}
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <p className="text-[11px] font-medium text-zinc-800 truncate">{collab.title || profileNames}</p>
-                            {collab.title && profileNames && (
-                              <p className="text-[10px] text-zinc-400 truncate">{profileNames}</p>
-                            )}
-                          </div>
-                        </button>
-                      );
-                    })
-                  )}
-                </div>
-              )}
-            </div>
+            
 
             <input
               ref={fileInputRef}
