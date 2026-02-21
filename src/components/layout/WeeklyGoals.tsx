@@ -12,7 +12,8 @@ export default function WeeklyGoals() {
   const currentView = useStore((s) => s.currentView);
 
   const { filteredEvents, tagCounts, label, totalHours, tagOrder } = useMemo(() => {
-    const date = new Date(selectedDate + 'T00:00:00');
+    const parsed = new Date(selectedDate + 'T00:00:00');
+    const date = isNaN(parsed.getTime()) ? new Date() : parsed;
     let rangeStart: string;
     let rangeEnd: string;
     let label: string;

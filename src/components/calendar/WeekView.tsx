@@ -80,7 +80,7 @@ function WeekEventBlock({
     >
       <div className="px-1.5 py-1 h-full flex flex-col">
         <span
-          className="text-[20px] font-semibold leading-tight truncate"
+          className="text-[11px] font-semibold leading-tight truncate"
           style={{ color: event.color }}
         >
           {event.title}
@@ -153,7 +153,8 @@ function DayColumn({
 export default function WeekView({ onDayClick, onEventClick }: WeekViewProps) {
   const { selectedDate, events } = useStore();
   const scrollRef = useRef<HTMLDivElement>(null);
-  const current = new Date(selectedDate + 'T00:00:00');
+  const parsed = new Date(selectedDate + 'T00:00:00');
+  const current = isNaN(parsed.getTime()) ? new Date() : parsed;
   const ws = startOfWeek(current, { weekStartsOn: 1 });
   const we = endOfWeek(current, { weekStartsOn: 1 });
   const days = eachDayOfInterval({ start: ws, end: we });
@@ -169,7 +170,7 @@ export default function WeekView({ onDayClick, onEventClick }: WeekViewProps) {
     <div className="flex flex-col h-full bg-surface rounded-lg border border-border overflow-hidden">
       {/* Day headers */}
       <div className="flex border-b border-border sticky top-0 z-20 bg-surface">
-        <div className="w-14 flex-shrink-0" />
+        <div className="w-14 flex-shrink-0 border-r border-border-light" />
         {days.map((day) => {
           const today = isToday(day);
           const dateStr = format(day, 'yyyy-MM-dd');
@@ -199,7 +200,7 @@ export default function WeekView({ onDayClick, onEventClick }: WeekViewProps) {
       {/* Time grid */}
       <div ref={scrollRef} className="flex flex-1 overflow-y-auto">
         {/* Time labels */}
-        <div className="w-14 flex-shrink-0">
+        <div className="w-14 flex-shrink-0 border-r border-border-light">
           {TIME_SLOTS.map((time, i) => (
             <div
               key={time}

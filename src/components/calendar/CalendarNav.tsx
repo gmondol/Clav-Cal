@@ -7,7 +7,8 @@ import { CalendarView } from '@/lib/types';
 export default function CalendarNav() {
   const { currentView, selectedDate, setCurrentView, setSelectedDate } = useStore();
 
-  const date = new Date(selectedDate + 'T00:00:00');
+  const parsed = new Date(selectedDate + 'T00:00:00');
+  const date = isNaN(parsed.getTime()) ? new Date() : parsed;
   const isMonth = currentView === 'month';
 
   const navigate = (dir: -1 | 1) => {

@@ -22,7 +22,8 @@ interface CalendarGridProps {
 
 export default function CalendarGrid({ onDayClick, onEventClick }: CalendarGridProps) {
   const { selectedDate, events } = useStore();
-  const currentMonth = new Date(selectedDate + 'T00:00:00');
+  const parsedDate = new Date(selectedDate + 'T00:00:00');
+  const currentMonth = isNaN(parsedDate.getTime()) ? new Date() : parsedDate;
 
   const monthStart = startOfMonth(currentMonth);
   const monthEnd = endOfMonth(currentMonth);

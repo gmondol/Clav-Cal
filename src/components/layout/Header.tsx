@@ -29,7 +29,8 @@ export default function Header({ onExport, onHelp }: HeaderProps) {
   }, []);
   const { currentView, selectedDate, setCurrentView, setSelectedDate } = useStore();
 
-  const date = new Date(selectedDate + 'T00:00:00');
+  const parsedDate = new Date(selectedDate + 'T00:00:00');
+  const date = isNaN(parsedDate.getTime()) ? new Date() : parsedDate;
   const isMonth = currentView === 'month';
 
   const navigate = (dir: -1 | 1) => {

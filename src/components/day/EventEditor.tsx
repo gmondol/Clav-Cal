@@ -228,7 +228,7 @@ export default function EventEditor({
         value={description}
         onChange={(e) => setDescription(e.target.value)}
         placeholder="📝 Notes / description..."
-        rows={2}
+        rows={4}
         className="w-full text-xs bg-zinc-50 rounded-md border border-border-light p-2 outline-none resize-none placeholder:text-zinc-300 focus:border-primary/30"
       />
 
