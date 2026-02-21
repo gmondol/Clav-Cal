@@ -149,7 +149,7 @@ function ContentCard({
               ))}
             </div>
           )}
-          <h4 className="text-sm font-semibold leading-tight truncate" style={{ color: displayColor }}>
+          <h4 className="text-sm font-semibold leading-tight line-clamp-2" style={{ color: displayColor }}>
             {note.title}
           </h4>
         </div>
@@ -272,6 +272,8 @@ function NoteEditor({
   const [attachments, setAttachments] = useState<string[]>(note?.attachments ?? []);
   const [uploading, setUploading] = useState(false);
   const [linkedCollabIds, setLinkedCollabIds] = useState<string[]>(note?.linkedCollabIds ?? []);
+  const [preCollabTags, setPreCollabTags] = useState<string[] | null>(null);
+  const [preCollabColor, setPreCollabColor] = useState<string | null>(null);
   const [showCollabPicker, setShowCollabPicker] = useState(false);
   const [showContact, setShowContact] = useState(!!(note?.contactName || note?.contactLastName || note?.contactRole || note?.contactPhone || note?.contactEmail || note?.contactNotes));
   const [showNewTagForm, setShowNewTagForm] = useState(false);
@@ -290,6 +292,10 @@ function NoteEditor({
   const linkedCollabs = allNotes.filter((n) => linkedCollabIds.includes(n.id));
 
   const attachCollab = (collabId: string) => {
+    if (linkedCollabIds.length === 0) {
+      setPreCollabTags([...tags]);
+      setPreCollabColor(color);
+    }
     setLinkedCollabIds((prev) => [...prev, collabId]);
     setTags(['Collab']);
     if (TAG_DEFAULT_COLORS['Collab']) setColor(TAG_DEFAULT_COLORS['Collab']);
@@ -300,8 +306,10 @@ function NoteEditor({
     const next = linkedCollabIds.filter((id) => id !== collabId);
     setLinkedCollabIds(next);
     if (next.length === 0) {
-      setTags([]);
-      setColor('#000000');
+      setTags(preCollabTags ?? []);
+      setColor(preCollabColor ?? '#000000');
+      setPreCollabTags(null);
+      setPreCollabColor(null);
     }
   };
 
@@ -492,12 +500,13 @@ function NoteEditor({
         )}
 
         <div className="flex gap-2">
-          {/* Attach Collab Button + Picker */}
+          {/* Attach Collab Button + Picker — only for approved content */}
+          {isApproved && (
           <div className="relative flex-1">
             <button
               type="button"
               onClick={() => setShowCollabPicker(!showCollabPicker)}
-              className="w-full text-xs rounded-md border border-dashed border-yellow-400 p-2 text-yellow-600 font-medium hover:border-yellow-500 hover:text-yellow-700 bg-yellow-50/50 hover:bg-yellow-50 transition-colors flex items-center justify-center gap-1.5"
+              className="w-full text-xs rounded-md border border-dashed border-red-400 p-2 text-red-500 font-medium hover:border-red-500 hover:text-red-600 hover:bg-red-50 transition-colors flex items-center justify-center gap-1.5"
             >
               🤝 Attach a Collab
             </button>
@@ -540,19 +549,8 @@ function NoteEditor({
               </div>
             )}
           </div>
-
-          {isApproved && !showContact && (
-            <button
-              type="button"
-              onClick={() => setShowContact(true)}
-              className="flex-1 flex items-center justify-center gap-1.5 text-xs text-blue-500 hover:text-blue-600 py-2 border border-dashed border-blue-400 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors"
-            >
-              <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                <circle cx="12" cy="7" r="4" /><path d="M5.5 21v-2a6 6 0 0113 0v2" /><path d="M20 8v6M23 11h-6" />
-              </svg>
-              Add Point of Contact
-            </button>
           )}
+
         </div>
 
         <textarea
@@ -572,6 +570,29 @@ function NoteEditor({
               rows={2}
               className="w-full text-xs bg-zinc-50 rounded-md border border-border-light p-2 outline-none resize-none placeholder:text-zinc-300 focus:border-primary/30"
             />
+
+            <div className="flex gap-2">
+              {!showContact && (
+                <button
+                  type="button"
+                  onClick={() => setShowContact(true)}
+                  className="flex-1 flex items-center justify-center gap-1.5 text-xs text-blue-500 hover:text-blue-600 py-2 border border-dashed border-blue-400 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors"
+                >
+                  <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                    <circle cx="12" cy="7" r="4" /><path d="M5.5 21v-2a6 6 0 0113 0v2" /><path d="M20 8v6M23 11h-6" />
+                  </svg>
+                  Add Point of Contact
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploading}
+                className="flex-1 flex items-center justify-center gap-1.5 text-xs text-blue-500 hover:text-blue-600 py-2 border border-dashed border-blue-400 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors"
+              >
+                {uploading ? '...' : '📎'} Add Attachment
+              </button>
+            </div>
 
             {showContact && (
               <div className="space-y-2 p-3 rounded-lg border border-zinc-200 bg-white">
@@ -701,16 +722,6 @@ function NoteEditor({
           >
             Cancel
           </button>
-          {status === 'ready' && (
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={uploading}
-              className="px-3 py-2 text-xs text-blue-500 font-medium bg-white border border-dashed border-blue-400 rounded-lg hover:border-blue-500 hover:text-blue-600 hover:bg-blue-50 transition-colors"
-            >
-              {uploading ? '...' : '📎'}
-            </button>
-          )}
           {onDelete && note && (
             <button
               type="button"
