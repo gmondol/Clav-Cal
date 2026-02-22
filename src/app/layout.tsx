@@ -1,8 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import { Inter } from 'next/font/google';
 import './globals.css';
-import AuthGate from '@/components/AuthGate';
-
 const inter = Inter({
   variable: '--font-geist-sans',
   subsets: ['latin'],
@@ -27,7 +25,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en">
       <body className={`${inter.variable} antialiased`}>
-        <AuthGate>{children}</AuthGate>
+        {children}
       </body>
     </html>
   );
