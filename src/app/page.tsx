@@ -9,6 +9,7 @@ import {
   TouchSensor,
   useSensor,
   useSensors,
+  useDroppable,
   DragStartEvent,
   DragEndEvent,
 } from '@dnd-kit/core';
@@ -34,6 +35,30 @@ type DragItem =
 interface PendingDrop {
   note: ScratchNote;
   date: string;
+}
+
+function UnscheduleZone() {
+  const { setNodeRef, isOver } = useDroppable({
+    id: 'unschedule-drop',
+    data: { type: 'unschedule' },
+  });
+  return (
+    <div
+      ref={setNodeRef}
+      className={`fixed bottom-0 left-0 right-0 z-50 flex items-center justify-center gap-3 py-4 transition-all ${
+        isOver
+          ? 'bg-red-500 text-white shadow-2xl'
+          : 'bg-red-50 border-t-2 border-dashed border-red-300 text-red-400'
+      }`}
+    >
+      <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+        <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" />
+      </svg>
+      <span className="text-sm font-semibold">
+        {isOver ? 'Release to remove from calendar' : 'Drop here to remove from calendar'}
+      </span>
+    </div>
+  );
 }
 
 function ResizablePanel({ children }: { children: React.ReactNode }) {
@@ -285,6 +310,8 @@ export default function Home() {
           </ResizablePanel>
         </div>
       </div>
+
+      {activeDrag?.type === 'event' && <UnscheduleZone />}
 
       {activeDrag && (
         <DragOverlay>
