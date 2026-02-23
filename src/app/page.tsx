@@ -5,6 +5,7 @@ import {
   DndContext,
   DragOverlay,
   closestCenter,
+  pointerWithin,
   MouseSensor,
   TouchSensor,
   useSensor,
@@ -12,6 +13,7 @@ import {
   useDroppable,
   DragStartEvent,
   DragEndEvent,
+  CollisionDetection,
 } from '@dnd-kit/core';
 import { useStore } from '@/store/useStore';
 import { CalendarEvent, ScratchNote } from '@/lib/types';
@@ -36,6 +38,15 @@ interface PendingDrop {
   note: ScratchNote;
   date: string;
 }
+
+const collisionDetection: CollisionDetection = (args) => {
+  // Always check pointer-within first — if pointer is inside unschedule zone, return it immediately
+  const pointerCollisions = pointerWithin(args);
+  const unscheduleHit = pointerCollisions.find((c) => c.id === 'unschedule-drop');
+  if (unscheduleHit) return [unscheduleHit];
+  // Otherwise fall back to closestCenter
+  return closestCenter(args);
+};
 
 function UnscheduleZone() {
   const { setNodeRef, isOver } = useDroppable({
@@ -284,7 +295,7 @@ export default function Home() {
   return (
     <DndContext
       sensors={sensors}
-      collisionDetection={closestCenter}
+      collisionDetection={collisionDetection}
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
     >
