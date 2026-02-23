@@ -40,11 +40,20 @@ interface PendingDrop {
 }
 
 const collisionDetection: CollisionDetection = (args) => {
-  // Always check pointer-within first — if pointer is inside unschedule zone, return it immediately
+  // Use pointerWithin first so the actual pointer position drives detection
   const pointerCollisions = pointerWithin(args);
+
+  // Highest priority: unschedule drop zone
   const unscheduleHit = pointerCollisions.find((c) => c.id === 'unschedule-drop');
   if (unscheduleHit) return [unscheduleHit];
-  // Otherwise fall back to closestCenter
+
+  // Second priority: any calendar day cell the pointer is physically over.
+  // This ensures dragging notes from the sidebar onto the calendar always works,
+  // even though closestCenter would otherwise prefer nearer sortable note items.
+  const dayHit = pointerCollisions.find((c) => String(c.id).startsWith('day-'));
+  if (dayHit) return [dayHit];
+
+  // Fall back to closestCenter for everything else (event reordering, note sorting)
   return closestCenter(args);
 };
 
