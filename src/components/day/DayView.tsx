@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useRef, useEffect } from 'react';
 import { format, parse } from 'date-fns';
-import { useDroppable } from '@dnd-kit/core';
+import { useDroppable, useDraggable } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
@@ -307,6 +307,42 @@ export default function DayView({ date, onClose }: DayViewProps) {
   );
 }
 
+function DraggableNoteCard({ note }: { note: ScratchNote }) {
+  const noteTagColor = note.tags.length > 0 && TAG_DEFAULT_COLORS[note.tags[0]] ? TAG_DEFAULT_COLORS[note.tags[0]] : undefined;
+  const noteDisplayColor = noteTagColor || note.color || '#000000';
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
+    id: note.id,
+    data: { type: 'scratch-note', note },
+  });
+  return (
+    <div
+      ref={setNodeRef}
+      {...listeners}
+      {...attributes}
+      className="rounded-lg p-4 transition-all group hover:shadow-sm cursor-grab active:cursor-grabbing"
+      style={{
+        backgroundColor: noteDisplayColor + '10',
+        borderLeft: `3px solid ${noteDisplayColor}`,
+        opacity: isDragging ? 0.4 : 1,
+      }}
+    >
+      <div className="flex items-start justify-between gap-1.5">
+        <div className="min-w-0 flex-1">
+          <h4 className="text-[11px] font-semibold leading-tight truncate" style={{ color: noteDisplayColor }}>
+            {note.title}
+          </h4>
+          {note.description && (
+            <p className="text-[10px] text-zinc-400 mt-0.5 line-clamp-2">{note.description}</p>
+          )}
+        </div>
+        <svg width="10" height="10" fill="none" stroke={noteDisplayColor} strokeWidth="2" viewBox="0 0 24 24" className="flex-shrink-0 mt-0.5 opacity-40">
+          <circle cx="9" cy="5" r="1"/><circle cx="15" cy="5" r="1"/><circle cx="9" cy="12" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="9" cy="19" r="1"/><circle cx="15" cy="19" r="1"/>
+        </svg>
+      </div>
+    </div>
+  );
+}
+
 function UnscheduleSidebar({ filteredNotes, ideaSearch, setIdeaSearch, setShowNewForm, setEditingEvent, scheduleNote }: {
   filteredNotes: ScratchNote[];
   ideaSearch: string;
@@ -352,33 +388,9 @@ function UnscheduleSidebar({ filteredNotes, ideaSearch, setIdeaSearch, setShowNe
                   <p className="text-[10px] mt-0.5">Add ideas from the Content Workshop</p>
                 </div>
               )}
-              {filteredNotes.map((note) => {
-                const statusInfo = NOTE_STATUSES.find((s) => s.value === (note.status ?? 'idea'));
-                const noteTagColor = note.tags.length > 0 && TAG_DEFAULT_COLORS[note.tags[0]] ? TAG_DEFAULT_COLORS[note.tags[0]] : undefined;
-                const noteDisplayColor = noteTagColor || note.color || '#000000';
-                return (
-                  <div
-                    key={note.id}
-                    className="rounded-lg p-4 transition-all group hover:shadow-sm"
-                    style={{
-                      backgroundColor: noteDisplayColor + '10',
-                      borderLeft: `3px solid ${noteDisplayColor}`,
-                    }}
-                  >
-                    <div className="flex items-start justify-between gap-1.5">
-                      <div className="min-w-0 flex-1">
-                        <h4 className="text-[11px] font-semibold leading-tight truncate" style={{ color: noteDisplayColor }}>
-                          {note.title}
-                        </h4>
-                        {note.description && (
-                          <p className="text-[10px] text-zinc-400 mt-0.5 line-clamp-2">{note.description}</p>
-                        )}
-                      </div>
-                    </div>
-                    
-                  </div>
-                );
-              })}
+              {filteredNotes.map((note) => (
+                <DraggableNoteCard key={note.id} note={note} />
+              ))}
             </div>
             {isOver && (
               <div className="p-3 border-t border-blue-300 bg-blue-50 text-center">
