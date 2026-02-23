@@ -113,7 +113,7 @@ export async function generateSchedulePDF(
 
       doc.setFontSize(11);
       doc.setFont('helvetica', 'bold');
-      doc.setTextColor(59, 130, 246);
+      doc.setTextColor(30, 30, 30);
       doc.text(dayLabel, margin, y);
       y += 6;
 
