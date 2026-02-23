@@ -95,9 +95,9 @@ function DayEventBlock({
             <span className="text-xs line-clamp-2 mt-4 opacity-70" style={{ color: event.color }}>👤 {event.contact}</span>
           )}
         </div>
-        <div className="flex-[2] p-2 flex flex-col justify-start min-w-0 border-l border-border-light">
+        <div className="flex-[2] p-2 flex flex-col justify-start min-w-0 border-l border-border-light overflow-y-auto">
           {event.description && (
-            <span className="text-xs line-clamp-4" style={{ color: event.color }}>{event.description}</span>
+            <span className="text-xs whitespace-pre-line" style={{ color: event.color }}>{event.description}</span>
           )}
         </div>
       </div>
