@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useRef, useEffect } from 'react';
+import { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { format, parse } from 'date-fns';
 import { useDroppable, useDraggable } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
@@ -106,13 +106,18 @@ function DayEventBlock({
 }
 
 export default function DayView({ date, onClose }: DayViewProps) {
-  const { events, notes, addEvent, updateEvent, deleteEvent, updateNote } = useStore();
+  const { events, notes, addEvent, updateEvent, deleteEvent, updateNote, loadFromSupabase } = useStore();
   const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null);
   const [showNewForm, setShowNewForm] = useState(false);
   const [newFormTime, setNewFormTime] = useState('10:00');
   const [ideaSearch, setIdeaSearch] = useState('');
   const [cityState, setCityState] = useState('');
   const [editingCityState, setEditingCityState] = useState(false);
+
+  // Refresh from Supabase each time the DayView opens so stale cached events don't cause false overlaps
+  useEffect(() => {
+    loadFromSupabase();
+  }, [date]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const dayEvents = useMemo(() => getEventsForDate(events, date), [events, date]);
   const conflicts = useMemo(() => getConflictingEvents(dayEvents), [dayEvents]);
