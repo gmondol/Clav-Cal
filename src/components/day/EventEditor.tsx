@@ -89,7 +89,6 @@ export default function EventEditor({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim()) return;
-    setOverlapError(false);
     onSave({
       date,
       startTime,
