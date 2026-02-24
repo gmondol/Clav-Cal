@@ -42,7 +42,6 @@ export default function EventEditor({
   const [confirmed, setConfirmed] = useState(event?.confirmed ?? false);
   const [attachments, setAttachments] = useState<string[]>(event?.attachments ?? []);
   const [uploading, setUploading] = useState(false);
-  const [overlapError, setOverlapError] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -90,19 +89,6 @@ export default function EventEditor({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim()) return;
-    const newStart = timeToMinutes(startTime);
-    const newEnd = timeToMinutes(computeEndTime());
-    const hasOverlap = existingEvents
-      .filter((ev) => ev.id !== event?.id)
-      .some((ev) => {
-        const evStart = timeToMinutes(ev.startTime);
-        const evEnd = timeToMinutes(ev.endTime);
-        return newStart < evEnd && newEnd > evStart;
-      });
-    if (hasOverlap) {
-      setOverlapError(true);
-      return;
-    }
     setOverlapError(false);
     onSave({
       date,
@@ -284,18 +270,6 @@ export default function EventEditor({
         )}
       </div>
 
-      {overlapError && (
-        <div className="bg-red-50 border border-red-300 rounded-lg p-3 flex items-start gap-2">
-          <span className="text-red-500 text-sm flex-shrink-0">⚠️</span>
-          <div>
-            <p className="text-xs font-semibold text-red-600">Time overlap error</p>
-            <p className="text-[10px] text-red-500 mt-0.5">This time conflicts with an existing event. Please adjust the start time or duration.</p>
-          </div>
-          <button type="button" onClick={() => setOverlapError(false)} className="text-red-400 hover:text-red-600 ml-auto flex-shrink-0">
-            <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12" /></svg>
-          </button>
-        </div>
-      )}
 
       <div className="flex gap-2 pt-1">
         <button
