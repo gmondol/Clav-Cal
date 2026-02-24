@@ -5,6 +5,7 @@ import {
   DndContext,
   DragOverlay,
   closestCenter,
+  rectIntersection,
   pointerWithin,
   MouseSensor,
   TouchSensor,
@@ -40,20 +41,27 @@ interface PendingDrop {
 }
 
 const collisionDetection: CollisionDetection = (args) => {
-  // Use pointerWithin first so the actual pointer position drives detection
-  const pointerCollisions = pointerWithin(args);
-
-  // Highest priority: unschedule drop zone
-  const unscheduleHit = pointerCollisions.find((c) => c.id === 'unschedule-drop');
+  // Priority 1: pointer-within check for unschedule zone
+  const pointerHits = pointerWithin(args);
+  const unscheduleHit = pointerHits.find((c) => c.id === 'unschedule-drop');
   if (unscheduleHit) return [unscheduleHit];
 
-  // Second priority: any calendar day cell the pointer is physically over.
-  // This ensures dragging notes from the sidebar onto the calendar always works,
-  // even though closestCenter would otherwise prefer nearer sortable note items.
-  const dayHit = pointerCollisions.find((c) => String(c.id).startsWith('day-'));
-  if (dayHit) return [dayHit];
+  // Priority 2: pointer-within check for day cells (works when pointer coordinates are available)
+  const dayPointerHit = pointerHits.find((c) => String(c.id).startsWith('day-'));
+  if (dayPointerHit) return [dayPointerHit];
 
-  // Fall back to closestCenter for everything else (event reordering, note sorting)
+  // Priority 3: rect intersection with day cells (drag overlay rect overlaps cell rect).
+  // This is the most reliable fallback for cross-panel drags where pointerWithin may
+  // not fire (e.g. pointer coordinates not propagated by the sensor in all browsers).
+  const dayContainers = args.droppableContainers.filter(
+    (c) => String(c.id).startsWith('day-')
+  );
+  if (dayContainers.length > 0) {
+    const dayRectHits = rectIntersection({ ...args, droppableContainers: dayContainers });
+    if (dayRectHits.length > 0) return dayRectHits;
+  }
+
+  // Priority 4: fall back to closestCenter for within-panel sorting (notes/events)
   return closestCenter(args);
 };
 
